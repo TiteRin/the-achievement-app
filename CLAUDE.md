@@ -8,7 +8,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Mobile-first web app for logging daily accomplishments with unconditionally positive feedback (no punitive streaks, no broken chains on a missed day). Full specs are in [instructions.txt](instructions.txt).
 
-Status: early scaffold (Phase 0 complete). Domain, database, and auth layers described below are the target architecture, not yet all implemented — check `src/` before assuming a layer exists.
+Status: domain layer and Prisma/Postgres infrastructure are implemented (Phases 0–3). Auth, application-layer wiring to the UI, and the admin back-office are not yet built — check `src/` before assuming a layer exists.
 
 ## Commands
 
@@ -25,7 +25,10 @@ npx vitest run -t "test name"          # single test by name
 npm run test:e2e                       # Playwright (auto-starts npm run dev)
 npx playwright test e2e/some.spec.ts   # single e2e file
 
-docker compose up -d    # local Postgres for dev (see .env.example for DATABASE_URL)
+docker compose up -d    # local Postgres for dev (port from POSTGRES_PORT in .env, defaults to 5432)
+npx prisma migrate dev  # apply schema migrations
+npx prisma generate     # regenerate the client after editing schema.prisma
+npx prisma studio       # browse the local DB
 ```
 
 ## Architecture
@@ -34,7 +37,7 @@ Domain-Driven Design, organized by layer under `src/`:
 
 - `src/domain/{user,task}/` — entities and repository *interfaces* only, no framework/ORM imports. Core rule: a `Task` belongs to one `User` and is get-or-created by `(userId, label)`; each log creates a `TaskLog` under that task. The "day" a log belongs to (for the daily counter and for what can still be deleted) is derived from `TaskLog.loggedAt` converted into `User.timezone` — not UTC midnight. A log can only be deleted while it's still "today" for that user; past logs are immutable.
 - `src/application/` — use cases (`log-task`, `remove-today-log`, `list-today-tasks`, admin `list-accounts` / `list-tasks-with-stats`) that orchestrate domain objects via the repository interfaces. This is the layer route handlers/Server Actions call into — they should not talk to Prisma directly.
-- `src/infrastructure/prisma/` — Prisma schema and repository implementations (satisfying the `src/domain` interfaces).
+- `src/infrastructure/prisma/` — Prisma schema and repository implementations (satisfying the `src/domain` interfaces). Prisma 7: config lives in `prisma.config.ts` at the repo root (schema/migrations paths, `DATABASE_URL`), not in `schema.prisma` or `package.json`. The client is generated as TS source into `src/infrastructure/prisma/generated/` (gitignored, regenerate with `npx prisma generate`) and requires a driver adapter — `PrismaClient` is constructed with `@prisma/adapter-pg` in `src/infrastructure/prisma/client.ts`, it does not read `DATABASE_URL` implicitly. Repositories map Prisma records to domain entities via the entities' own `create()` factories; `Task` also stores a derived `labelKey` (normalized, lowercased) with a `@@unique([userId, labelKey])` constraint so case/whitespace-insensitive dedup is enforced by Postgres, not just app code.
 - `src/infrastructure/auth/` — Auth.js (NextAuth v5) config: Credentials provider first, Email (magic-link) provider added later without touching the rest of auth.
 - `src/app/` — Next.js App Router routes/pages, plus `/admin/*` for the role-gated back-office (accounts list, tasks list with log stats).
 - `src/components/` — UI: `task-input`, `feedback-message`, `task-list-item`, `daily-counter`, `celebration-animation`. Animations use `motion` (Framer Motion) — e.g. zoom-in-out on log, positive-message rotation.
@@ -46,6 +49,8 @@ Never write domain/application code that imports Prisma or Next.js types directl
 TDD for the domain and application layers: write the Vitest test first (red), then implement (green). Vitest + Testing Library cover unit/domain logic and synchronous components (async Server Components aren't supported by Vitest — use Playwright e2e for those). Playwright e2e covers full flows (login → log a task → see feedback/counter → delete today's log).
 
 Tests live under `tests/`, mirroring the `src/` tree (e.g. `src/domain/task/task.entity.ts` ↔ `tests/domain/task/task.entity.test.ts`) — not colocated next to the source file. Import from source via the `@/*` alias (e.g. `@/domain/task/task.entity`), not relative paths.
+
+`src/infrastructure/prisma/*.repository.ts` are covered by integration tests (`tests/infrastructure/prisma/`) that run against the real local Postgres (`docker compose up -d`, migrated) rather than mocks — these files start with `// @vitest-environment node` since they don't need jsdom. Each test file cleans up only the rows it created, scoped by a per-file email suffix (e.g. `@task-repo.test.local`) deleted `afterEach`, so parallel test files sharing the same DB don't clobber each other.
 
 ## Hosting constraint
 
