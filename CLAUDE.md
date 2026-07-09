@@ -19,7 +19,7 @@ npm run lint             # ESLint
 
 npm run test              # Vitest, watch mode
 npm run test:run          # Vitest, single run
-npx vitest run path/to/file.test.ts   # single test file
+npx vitest run tests/domain/task/task.entity.test.ts   # single test file
 npx vitest run -t "test name"          # single test by name
 
 npm run test:e2e                       # Playwright (auto-starts npm run dev)
@@ -44,6 +44,8 @@ Never write domain/application code that imports Prisma or Next.js types directl
 ### Testing approach
 
 TDD for the domain and application layers: write the Vitest test first (red), then implement (green). Vitest + Testing Library cover unit/domain logic and synchronous components (async Server Components aren't supported by Vitest — use Playwright e2e for those). Playwright e2e covers full flows (login → log a task → see feedback/counter → delete today's log).
+
+Tests live under `tests/`, mirroring the `src/` tree (e.g. `src/domain/task/task.entity.ts` ↔ `tests/domain/task/task.entity.test.ts`) — not colocated next to the source file. Import from source via the `@/*` alias (e.g. `@/domain/task/task.entity`), not relative paths.
 
 ## Hosting constraint
 
