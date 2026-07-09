@@ -1,8 +1,8 @@
-# my-achievments
+# The Achievement App
 
 Application web mobile-first pour logger les choses faites dans la journée, avec un feedback toujours positif (jamais de tracker punitif, jamais de "streak" qui casse).
 
-Voir [instructions.txt](./instructions.txt) pour les specs d'origine et [.claude/plans](../../.claude/plans) pour le plan d'implémentation détaillé.
+Voir [instructions.txt](./instructions.txt) pour les specs d'origine
 
 ## Stack
 
