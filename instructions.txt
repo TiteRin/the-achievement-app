@@ -1,0 +1,19 @@
+Je veux créer une application web destinée d’abord au mobile, où un·e utilisateur·trice peut logger les choses qu’iel a faites dans la journée. 
+
+À la différence d’un tracker classique, le but ici est de proposer toujours un feedback positif : 
+  - à chaque nouvelle entrée, un message de type "Génial !", "Félicitations !", "Incroyable !", ou en anglais "Awesome!", "Terrific!", "Incredible!" s’affichent
+  - il y a une animation visuelle (zoom-in-out par exemple) à la validation
+  - optimitic ui
+  - un compteur s’incrémente (le nombre de tâches effectuées dans la journée). 
+  - pas de chaîne qui se brise en cas d’oubli 
+
+L’application doit être minimaliste : un champ texte pour entrer une tâche, une zone de feedback, mais doit avoir des effets visuels *whismical* et *cozy*. 
+  - la zone de feedback affiche les tâches saisies, avec la possibilité de la supprimer
+  - il est possible de saisir une tâche plusieurs fois dans la journée, on affiche alors un compteur à côté ("boire de l’eau x3")
+
+Je veux d’abord soigner le visuel, avec une application simple mais efficace.
+
+C’est une application avec authentification (login/mot de passe ou magic link), et un léger back-office pour l’administration (liste des comptes, liste des tâches). 
+Une tâche doit pouvoir être indexée dans la base de données afin de faire des statistiques dessus (user#2 possède la tâche "faire la lessive", et l’a déjà loggé 6 fois, mais une tâche appartient à un user). 
+
+Je souhaite avoir une approche TDD et DDD. J’ai sûrement oublié des specs, je te laisse donc me poser des questions.
