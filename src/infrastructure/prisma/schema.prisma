@@ -1,0 +1,50 @@
+generator client {
+  provider = "prisma-client"
+  output   = "./generated"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum UserRole {
+  user
+  admin
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  timezone  String
+  role      UserRole @default(user)
+  createdAt DateTime @default(now())
+
+  tasks Task[]
+
+  @@map("users")
+}
+
+model Task {
+  id        String   @id @default(uuid())
+  userId    String
+  label     String
+  labelKey  String
+  createdAt DateTime @default(now())
+
+  user User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  logs TaskLog[]
+
+  @@unique([userId, labelKey])
+  @@map("tasks")
+}
+
+model TaskLog {
+  id       String   @id @default(uuid())
+  taskId   String
+  loggedAt DateTime
+
+  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@index([taskId, loggedAt])
+  @@map("task_logs")
+}
