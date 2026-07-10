@@ -128,4 +128,24 @@ describe("PrismaTaskLogRepository", () => {
       expect(found?.taskId).toBe(taskId);
     });
   });
+
+  describe("countByTaskId", () => {
+    it("returns 0 when the task has no log", async () => {
+      const count = await repository.countByTaskId(taskId);
+      expect(count).toBe(0);
+    });
+
+    it("counts all logs for the task, regardless of day", async () => {
+      await repository.save(
+        TaskLog.create({ id: crypto.randomUUID(), taskId, loggedAt: new Date("2026-03-04T09:00:00Z") })
+      );
+      await repository.save(
+        TaskLog.create({ id: crypto.randomUUID(), taskId, loggedAt: new Date("2026-03-05T09:00:00Z") })
+      );
+
+      const count = await repository.countByTaskId(taskId);
+
+      expect(count).toBe(2);
+    });
+  });
 });

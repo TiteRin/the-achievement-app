@@ -8,5 +8,6 @@ export interface TaskLogRepository {
     timezone: string,
     reference: Date
   ): Promise<TaskLog[]>;
+  countByTaskId(taskId: string): Promise<number>;
   delete(logId: string): Promise<void>;
 }

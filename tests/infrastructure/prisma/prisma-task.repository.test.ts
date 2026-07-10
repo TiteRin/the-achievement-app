@@ -106,4 +106,26 @@ describe("PrismaTaskRepository", () => {
       expect(result.every((task) => task.userId === userId)).toBe(true);
     });
   });
+
+  describe("findAll", () => {
+    it("includes tasks across every user", async () => {
+      const otherUser = await prisma.user.create({
+        data: { email: `all-${crypto.randomUUID()}${EMAIL_SUFFIX}`, timezone: "Europe/Paris" },
+      });
+      const taskA = Task.create({ id: crypto.randomUUID(), userId, label: "Lire", createdAt: new Date() });
+      const taskB = Task.create({
+        id: crypto.randomUUID(),
+        userId: otherUser.id,
+        label: "Courir",
+        createdAt: new Date(),
+      });
+      await repository.save(taskA);
+      await repository.save(taskB);
+
+      const result = await repository.findAll();
+      const ids = result.map((task) => task.id);
+
+      expect(ids).toEqual(expect.arrayContaining([taskA.id, taskB.id]));
+    });
+  });
 });

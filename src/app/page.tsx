@@ -20,7 +20,10 @@ export default async function Home() {
 
   return (
     <main className="flex flex-1 flex-col bg-cozy-cream">
-      <DailyLogBoard initialTasks={todayTasks} />
+      <DailyLogBoard
+        initialTasks={todayTasks}
+        isAdmin={session.user.role === "admin"}
+      />
     </main>
   );
 }

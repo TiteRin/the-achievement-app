@@ -25,6 +25,11 @@ export class PrismaTaskRepository implements TaskRepository {
     return records.map(toDomain);
   }
 
+  async findAll(): Promise<Task[]> {
+    const records = await this.client.task.findMany({ orderBy: { createdAt: "asc" } });
+    return records.map(toDomain);
+  }
+
   async save(task: Task): Promise<void> {
     await this.client.task.upsert({
       where: { id: task.id },

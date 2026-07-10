@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useOptimistic, useState, useTransition } from "react";
+import Link from "next/link";
 import { motion } from "motion/react";
 import { TaskInput } from "@/components/task-input";
 import { DailyCounter } from "@/components/daily-counter";
@@ -52,7 +53,13 @@ function reducer(state: LoggedTask[], action: OptimisticAction): LoggedTask[] {
     .filter((task) => task.count > 0);
 }
 
-export function DailyLogBoard({ initialTasks }: { initialTasks: TodayTaskDto[] }) {
+export function DailyLogBoard({
+  initialTasks,
+  isAdmin,
+}: {
+  initialTasks: TodayTaskDto[];
+  isAdmin: boolean;
+}) {
   const [optimisticTasks, applyOptimistic] = useOptimistic(
     initialTasks.map(toLoggedTask),
     reducer
@@ -120,7 +127,15 @@ export function DailyLogBoard({ initialTasks }: { initialTasks: TodayTaskDto[] }
         </p>
       )}
 
-      <footer className="mt-auto flex justify-center pt-6">
+      <footer className="mt-auto flex flex-col items-center gap-2 pt-6">
+        {isAdmin && (
+          <Link
+            href="/admin"
+            className="text-sm text-cozy-brown-soft underline decoration-dotted underline-offset-4 hover:text-cozy-coral"
+          >
+            Back-office
+          </Link>
+        )}
         <SignOutButton />
       </footer>
     </div>

@@ -44,6 +44,10 @@ export class PrismaTaskLogRepository implements TaskLogRepository {
       .map(toDomain);
   }
 
+  async countByTaskId(taskId: string): Promise<number> {
+    return this.client.taskLog.count({ where: { taskId } });
+  }
+
   async delete(logId: string): Promise<void> {
     await this.client.taskLog.delete({ where: { id: logId } });
   }
