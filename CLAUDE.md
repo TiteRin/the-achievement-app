@@ -8,7 +8,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Mobile-first web app for logging daily accomplishments with unconditionally positive feedback (no punitive streaks, no broken chains on a missed day). Full specs are in [instructions.txt](instructions.txt).
 
-Status: domain layer and Prisma/Postgres infrastructure are implemented (Phases 0–3). Auth, application-layer wiring to the UI, and the admin back-office are not yet built — check `src/` before assuming a layer exists.
+Status: domain layer, Prisma/Postgres infrastructure, and credentials auth are implemented (Phases 0–4). Magic-link sign-in, application-layer wiring of the main UI to the backend (the `/` page is still the Phase 1 mock), and the admin back-office are not yet built — check `src/` before assuming a layer exists.
 
 ## Commands
 
@@ -31,6 +31,8 @@ npx prisma generate     # regenerate the client after editing schema.prisma
 npx prisma studio       # browse the local DB
 ```
 
+`.env` also needs `AUTH_SECRET` (see `.env.example`; generate with `openssl rand -base64 33`).
+
 ## Architecture
 
 Domain-Driven Design, organized by layer under `src/`:
@@ -38,7 +40,7 @@ Domain-Driven Design, organized by layer under `src/`:
 - `src/domain/{user,task}/` — entities and repository *interfaces* only, no framework/ORM imports. Core rule: a `Task` belongs to one `User` and is get-or-created by `(userId, label)`; each log creates a `TaskLog` under that task. The "day" a log belongs to (for the daily counter and for what can still be deleted) is derived from `TaskLog.loggedAt` converted into `User.timezone` — not UTC midnight. A log can only be deleted while it's still "today" for that user; past logs are immutable.
 - `src/application/` — use cases (`log-task`, `remove-today-log`, `list-today-tasks`, admin `list-accounts` / `list-tasks-with-stats`) that orchestrate domain objects via the repository interfaces. This is the layer route handlers/Server Actions call into — they should not talk to Prisma directly.
 - `src/infrastructure/prisma/` — Prisma schema and repository implementations (satisfying the `src/domain` interfaces). Prisma 7: config lives in `prisma.config.ts` at the repo root (schema/migrations paths, `DATABASE_URL`), not in `schema.prisma` or `package.json`. The client is generated as TS source into `src/infrastructure/prisma/generated/` (gitignored, regenerate with `npx prisma generate`) and requires a driver adapter — `PrismaClient` is constructed with `@prisma/adapter-pg` in `src/infrastructure/prisma/client.ts`, it does not read `DATABASE_URL` implicitly. Repositories map Prisma records to domain entities via the entities' own `create()` factories; `Task` also stores a derived `labelKey` (normalized, lowercased) with a `@@unique([userId, labelKey])` constraint so case/whitespace-insensitive dedup is enforced by Postgres, not just app code.
-- `src/infrastructure/auth/` — Auth.js (NextAuth v5) config: Credentials provider first, Email (magic-link) provider added later without touching the rest of auth.
+- `src/infrastructure/auth/` — Auth.js (NextAuth v5, still beta — `next-auth@beta`) config in `auth.ts`, exposed at `src/app/api/auth/[...nextauth]/route.ts`. Credentials provider only for now (email/password), JWT session strategy — deliberately **no** `@auth/prisma-adapter` (its schema doesn't map to our domain `User`, and its peer range doesn't cover Prisma 7 yet); `authorize()` calls `verify-credentials.ts`, which queries the `users` table directly. `password.ts` hashes with Node's built-in `scrypt` (no extra dependency). `register-user.ts` does the signup insert (with `passwordHash`) and relies on the DB's unique `email` constraint (catches Prisma error `P2002`) rather than a check-then-insert race. `types.d.ts` augments `@auth/core/types`/`@auth/core/jwt` (not `"next-auth"` — those types are re-exported, not declared there, so augmenting `"next-auth"` silently no-ops) to carry `timezone`/`role` on `User`/`Session`/`JWT`. Magic-link (Email provider) is not implemented yet — it will need real token/adapter storage, unlike Credentials.
 - `src/app/` — Next.js App Router routes/pages, plus `/admin/*` for the role-gated back-office (accounts list, tasks list with log stats).
 - `src/components/` — UI: `task-input`, `feedback-message`, `task-list-item`, `daily-counter`, `celebration-animation`. Animations use `motion` (Framer Motion) — e.g. zoom-in-out on log, positive-message rotation.
 

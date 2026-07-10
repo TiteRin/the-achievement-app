@@ -17,10 +17,13 @@ Voir [instructions.txt](./instructions.txt) pour les specs d'origine
 ```bash
 npm install
 cp .env.example .env       # DATABASE_URL + POSTGRES_PORT locaux
+# puis renseigne AUTH_SECRET dans .env (openssl rand -base64 33)
 docker compose up -d       # Postgres local
 npx prisma migrate dev     # applique les migrations
 npm run dev                # http://localhost:3000
 ```
+
+Inscription/connexion : `/signup` et `/login` (email + mot de passe pour l'instant, magic link à venir).
 
 Par défaut, Postgres écoute sur le port standard **5432**. Si ce port est déjà pris sur ta machine, change `POSTGRES_PORT` dans `.env` (et le port dans `DATABASE_URL` en conséquence), puis relance `docker compose up -d`.
 
