@@ -1,6 +1,7 @@
 import type { TaskLog } from "./task-log.entity";
 
 export interface TaskLogRepository {
+  findById(id: string): Promise<TaskLog | null>;
   save(log: TaskLog): Promise<void>;
   findByTaskAndDay(
     taskId: string,
