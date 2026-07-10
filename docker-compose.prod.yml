@@ -1,0 +1,50 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-myachievments}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: ${POSTGRES_DB:-myachievments}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-myachievments}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # One-shot job: applies pending migrations, then exits. `app` waits for it
+  # to succeed before starting (see depends_on below).
+  migrate:
+    build:
+      context: .
+      target: migrator
+    restart: "no"
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-myachievments}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-myachievments}
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  app:
+    build:
+      context: .
+      target: runner
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-myachievments}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-myachievments}
+      AUTH_SECRET: ${AUTH_SECRET:?Set AUTH_SECRET in .env}
+      # Required for Auth.js v5 self-hosted behind a reverse proxy / non-Vercel
+      # host — without it, every request is rejected as UntrustedHost.
+      AUTH_TRUST_HOST: "true"
+    ports:
+      - "${APP_PORT:-3000}:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+
+volumes:
+  postgres-data:
