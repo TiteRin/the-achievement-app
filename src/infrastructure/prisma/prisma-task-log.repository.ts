@@ -11,6 +11,12 @@ const WINDOW_MARGIN_MS = 26 * 60 * 60 * 1000;
 export class PrismaTaskLogRepository implements TaskLogRepository {
   constructor(private readonly client: PrismaClient) {}
 
+  async findById(id: string): Promise<TaskLog | null> {
+    const record = await this.client.taskLog.findUnique({ where: { id } });
+    if (!record) return null;
+    return toDomain(record);
+  }
+
   async save(log: TaskLog): Promise<void> {
     await this.client.taskLog.create({
       data: { id: log.id, taskId: log.taskId, loggedAt: log.loggedAt },
@@ -35,16 +41,18 @@ export class PrismaTaskLogRepository implements TaskLogRepository {
 
     return records
       .filter((record) => dayKey(record.loggedAt, timezone) === referenceKey)
-      .map((record) =>
-        TaskLog.create({
-          id: record.id,
-          taskId: record.taskId,
-          loggedAt: record.loggedAt,
-        })
-      );
+      .map(toDomain);
   }
 
   async delete(logId: string): Promise<void> {
     await this.client.taskLog.delete({ where: { id: logId } });
   }
+}
+
+function toDomain(record: { id: string; taskId: string; loggedAt: Date }): TaskLog {
+  return TaskLog.create({
+    id: record.id,
+    taskId: record.taskId,
+    loggedAt: record.loggedAt,
+  });
 }

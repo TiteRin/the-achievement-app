@@ -1,48 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { TaskLoggingService } from "@/domain/task/task-logging.service";
-import { Task } from "@/domain/task/task.entity";
-import { TaskLog } from "@/domain/task/task-log.entity";
-import type { TaskRepository } from "@/domain/task/task.repository";
-import type { TaskLogRepository } from "@/domain/task/task-log.repository";
-import { dayKey } from "@/domain/task/day-key";
-
-class InMemoryTaskRepository implements TaskRepository {
-  tasks: Task[] = [];
-
-  async findByUserIdAndLabel(userId: string, label: string) {
-    const key = label.trim().toLocaleLowerCase("fr-FR");
-    return (
-      this.tasks.find(
-        (task) =>
-          task.userId === userId &&
-          task.label.trim().toLocaleLowerCase("fr-FR") === key
-      ) ?? null
-    );
-  }
-
-  async save(task: Task) {
-    this.tasks = this.tasks.filter((t) => t.id !== task.id).concat(task);
-  }
-}
-
-class InMemoryTaskLogRepository implements TaskLogRepository {
-  logs: TaskLog[] = [];
-
-  async save(log: TaskLog) {
-    this.logs.push(log);
-  }
-
-  async findByTaskAndDay(taskId: string, timezone: string, reference: Date) {
-    const referenceKey = dayKey(reference, timezone);
-    return this.logs.filter(
-      (log) => log.taskId === taskId && dayKey(log.loggedAt, timezone) === referenceKey
-    );
-  }
-
-  async delete(logId: string) {
-    this.logs = this.logs.filter((log) => log.id !== logId);
-  }
-}
+import {
+  InMemoryTaskRepository,
+  InMemoryTaskLogRepository,
+} from "../../support/in-memory-repositories";
 
 function setup() {
   const taskRepository = new InMemoryTaskRepository();

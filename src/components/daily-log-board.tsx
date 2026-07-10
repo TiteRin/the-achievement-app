@@ -1,69 +1,100 @@
 "use client";
 
-import { useCallback, useState } from "react";
-import { AnimatePresence, motion } from "motion/react";
+import { useCallback, useOptimistic, useState, useTransition } from "react";
+import { motion } from "motion/react";
 import { TaskInput } from "@/components/task-input";
 import { DailyCounter } from "@/components/daily-counter";
 import { TaskListItem, type LoggedTask } from "@/components/task-list-item";
 import { FeedbackMessage, type FeedbackToast } from "@/components/feedback-message";
 import { CelebrationAnimation } from "@/components/celebration-animation";
-import { labelKey, normalizeLabel } from "@/lib/normalize-label";
+import { SignOutButton } from "@/components/sign-out-button";
+import { labelKey, normalizeLabel } from "@/domain/task/label";
 import { randomPositiveMessage } from "@/lib/positive-messages";
+import { logTaskAction, removeTodayLogAction } from "@/app/actions";
+import type { TodayTaskDto } from "@/application/list-today-tasks.usecase";
 
-// Mock, in-memory persistence for the Phase 1 visual prototype.
-// Replaced by real Server Actions + repositories in later phases.
-async function saveLogMock(): Promise<void> {
-  await new Promise((resolve) => setTimeout(resolve, 350));
+type OptimisticAction =
+  | { type: "log"; label: string }
+  | { type: "remove"; id: string };
+
+// `id` is the normalized label key, not the database task id: it's the one
+// identity that's already known and stable *before* the server round-trip,
+// so the optimistic placeholder and the confirmed server item share the same
+// React key instead of being treated as two different list items.
+function toLoggedTask(dto: TodayTaskDto): LoggedTask {
+  return {
+    id: labelKey(dto.label),
+    label: dto.label,
+    count: dto.countToday,
+    latestLogId: dto.latestLogId,
+  };
 }
 
-export function DailyLogBoard() {
-  const [tasks, setTasks] = useState<LoggedTask[]>([]);
+function reducer(state: LoggedTask[], action: OptimisticAction): LoggedTask[] {
+  if (action.type === "log") {
+    const key = labelKey(action.label);
+    const existing = state.find((task) => task.id === key);
+    if (existing) {
+      return state.map((task) =>
+        task.id === key ? { ...task, count: task.count + 1 } : task
+      );
+    }
+    return [
+      { id: key, label: normalizeLabel(action.label), count: 1, latestLogId: "" },
+      ...state,
+    ];
+  }
+
+  return state
+    .map((task) =>
+      task.id === action.id ? { ...task, count: task.count - 1 } : task
+    )
+    .filter((task) => task.count > 0);
+}
+
+export function DailyLogBoard({ initialTasks }: { initialTasks: TodayTaskDto[] }) {
+  const [optimisticTasks, applyOptimistic] = useOptimistic(
+    initialTasks.map(toLoggedTask),
+    reducer
+  );
+  const [, startTransition] = useTransition();
   const [toast, setToast] = useState<FeedbackToast | null>(null);
   const [burstId, setBurstId] = useState<number | null>(null);
 
-  const dailyTotal = tasks.reduce((sum, task) => sum + task.count, 0);
+  const dailyTotal = optimisticTasks.reduce((sum, task) => sum + task.count, 0);
 
-  const handleLog = useCallback((rawLabel: string) => {
-    const label = normalizeLabel(rawLabel);
-    const key = labelKey(label);
-    const eventId = Date.now();
+  const handleLog = useCallback(
+    (label: string) => {
+      const eventId = Date.now();
+      setToast({ id: eventId, text: randomPositiveMessage() });
+      setBurstId(eventId);
 
-    setTasks((current) => {
-      const existing = current.find((task) => labelKey(task.label) === key);
-      if (existing) {
-        return current.map((task) =>
-          task.id === existing.id ? { ...task, count: task.count + 1 } : task
-        );
-      }
-      return [{ id: key, label, count: 1 }, ...current];
-    });
+      startTransition(async () => {
+        applyOptimistic({ type: "log", label });
+        await logTaskAction(label);
+      });
+    },
+    [applyOptimistic]
+  );
 
-    setToast({ id: eventId, text: randomPositiveMessage() });
-    setBurstId(eventId);
-
-    // Optimistic UI: the entry above is already applied. This call stands
-    // in for the future Server Action round-trip.
-    void saveLogMock();
-  }, []);
-
-  const handleDelete = useCallback((id: string) => {
-    setTasks((current) =>
-      current
-        .map((task) =>
-          task.id === id ? { ...task, count: task.count - 1 } : task
-        )
-        .filter((task) => task.count > 0)
-    );
-  }, []);
+  const handleDelete = useCallback(
+    (task: LoggedTask) => {
+      startTransition(async () => {
+        applyOptimistic({ type: "remove", id: task.id });
+        if (task.latestLogId) await removeTodayLogAction(task.latestLogId);
+      });
+    },
+    [applyOptimistic]
+  );
 
   return (
     <div className="mx-auto flex w-full max-w-md flex-1 flex-col gap-6 px-5 py-8">
       <header className="flex flex-col items-center gap-4">
-        <div>
-          <h1 className="text-center text-2xl font-bold text-cozy-brown">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-cozy-brown">
             The Achievement App
           </h1>
-          <p className="text-center text-sm text-cozy-brown-soft">
+          <p className="text-sm text-cozy-brown-soft">
             Chaque petite victoire compte.
           </p>
         </div>
@@ -78,18 +109,20 @@ export function DailyLogBoard() {
       <FeedbackMessage toast={toast} onDismiss={() => setToast(null)} />
 
       <motion.ul layout className="flex flex-col gap-2">
-        <AnimatePresence initial={false}>
-          {tasks.map((task) => (
-            <TaskListItem key={task.id} task={task} onDelete={handleDelete} />
-          ))}
-        </AnimatePresence>
+        {optimisticTasks.map((task) => (
+          <TaskListItem key={task.id} task={task} onDelete={handleDelete} />
+        ))}
       </motion.ul>
 
-      {tasks.length === 0 && (
+      {optimisticTasks.length === 0 && (
         <p className="text-center text-sm text-cozy-brown-soft">
           Rien loggé pour l&apos;instant — commence par une petite victoire ✨
         </p>
       )}
+
+      <footer className="mt-auto flex justify-center pt-6">
+        <SignOutButton />
+      </footer>
     </div>
   );
 }

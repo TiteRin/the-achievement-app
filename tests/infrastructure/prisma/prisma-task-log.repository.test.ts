@@ -106,4 +106,26 @@ describe("PrismaTaskLogRepository", () => {
     );
     expect(logsToday).toHaveLength(0);
   });
+
+  describe("findById", () => {
+    it("returns null when no log matches the id", async () => {
+      const result = await repository.findById(crypto.randomUUID());
+      expect(result).toBeNull();
+    });
+
+    it("finds a log by id", async () => {
+      const log = TaskLog.create({
+        id: crypto.randomUUID(),
+        taskId,
+        loggedAt: new Date("2026-03-05T09:00:00Z"),
+      });
+      await repository.save(log);
+
+      const found = await repository.findById(log.id);
+
+      expect(found).toBeInstanceOf(TaskLog);
+      expect(found?.id).toBe(log.id);
+      expect(found?.taskId).toBe(taskId);
+    });
+  });
 });
