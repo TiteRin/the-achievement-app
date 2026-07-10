@@ -37,4 +37,19 @@ describe("PrismaUserRepository", () => {
     expect(found?.timezone).toBe("Europe/Paris");
     expect(found?.role).toBe("user");
   });
+
+  describe("findAll", () => {
+    it("includes every user, regardless of who created them", async () => {
+      const emailA = `all-a-${crypto.randomUUID()}${EMAIL_SUFFIX}`;
+      const emailB = `all-b-${crypto.randomUUID()}${EMAIL_SUFFIX}`;
+      await prisma.user.create({ data: { email: emailA, timezone: "Europe/Paris" } });
+      await prisma.user.create({ data: { email: emailB, timezone: "Europe/Paris", role: "admin" } });
+
+      const result = await repository.findAll();
+
+      const emails = result.map((user) => user.email);
+      expect(emails).toEqual(expect.arrayContaining([emailA, emailB]));
+      expect(result.every((user) => user instanceof User)).toBe(true);
+    });
+  });
 });
