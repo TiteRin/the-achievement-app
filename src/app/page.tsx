@@ -1,8 +1,6 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/infrastructure/auth/auth";
-import { prisma } from "@/infrastructure/prisma/client";
-import { PrismaTaskRepository } from "@/infrastructure/prisma/prisma-task.repository";
-import { PrismaTaskLogRepository } from "@/infrastructure/prisma/prisma-task-log.repository";
+import { taskRepository, taskLogRepository } from "@/infrastructure/prisma/repositories";
 import { listTodayTasks } from "@/application/list-today-tasks.usecase";
 import { DailyLogBoard } from "@/components/daily-log-board";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -12,8 +10,6 @@ export default async function Home() {
   const session = await auth();
   if (!session?.user) redirect("/login");
 
-  const taskRepository = new PrismaTaskRepository(prisma);
-  const taskLogRepository = new PrismaTaskLogRepository(prisma);
   const todayTasks = await listTodayTasks(taskRepository, taskLogRepository, {
     userId: session.user.id,
     timezone: session.user.timezone,
