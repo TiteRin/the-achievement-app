@@ -23,7 +23,7 @@ npx prisma migrate dev     # applique les migrations
 npm run dev                # http://localhost:3000
 ```
 
-Inscription/connexion : `/signup` et `/login` (email + mot de passe pour l'instant, magic link à venir).
+Inscription/connexion : `/signup` et `/login` (email + mot de passe, ou lien magique par email — nécessite `SMTP_*` dans `.env`).
 
 Par défaut, Postgres écoute sur le port standard **5432**. Si ce port est déjà pris sur ta machine, change `POSTGRES_PORT` dans `.env` (et le port dans `DATABASE_URL` en conséquence), puis relance `docker compose up -d`.
 
@@ -51,7 +51,7 @@ docker compose -f docker-compose.prod.yml up -d --build
 
 Ça lance 3 services dans l'ordre : `postgres` (avec healthcheck), `migrate` (job à usage unique qui applique les migrations Prisma puis s'arrête), puis `app` (démarre seulement une fois `migrate` terminé avec succès). L'app écoute sur le port `APP_PORT` (3000 par défaut) — mets un reverse proxy (nginx, Traefik, Caddy...) devant plutôt que de l'exposer directement.
 
-**Sur Portainer** : importer `docker-compose.prod.yml` comme stack, définir les variables d'environnement (`POSTGRES_PASSWORD`, `AUTH_SECRET`, `APP_PORT`) dans l'UI de la stack plutôt que dans un fichier `.env`.
+**Sur Portainer** : importer `docker-compose.prod.yml` comme stack, définir les variables d'environnement (`POSTGRES_PASSWORD`, `AUTH_SECRET`, `APP_PORT`, `ADMIN_EMAILS`, `SMTP_*` pour le magic link) dans l'UI de la stack plutôt que dans un fichier `.env`.
 
 Point d'attention : Auth.js v5 rejette par défaut les requêtes dont l'hôte n'est pas reconnu (protection anti host-header-injection, permissive sur Vercel mais pas ailleurs). `docker-compose.prod.yml` positionne déjà `AUTH_TRUST_HOST=true` pour l'app — nécessaire dès qu'on est derrière un reverse proxy ou un nom de domaine non prévu à l'avance.
 

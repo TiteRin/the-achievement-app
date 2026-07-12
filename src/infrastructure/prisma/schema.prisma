@@ -50,3 +50,14 @@ model TaskLog {
   @@index([taskId, loggedAt])
   @@map("task_logs")
 }
+
+// Auth.js magic-link (Nodemailer provider) token bookkeeping. Pure
+// infrastructure detail, not a domain concept — no entity/repository for it.
+model VerificationToken {
+  identifier String
+  token      String
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}

@@ -15,7 +15,7 @@ test("signup, log a task twice, delete one occurrence, sign out, sign back in", 
   page,
 }) => {
   await page.goto("/signup");
-  await page.getByLabel("Email").fill(email);
+  await page.getByLabel("Email", { exact: true }).fill(email);
   await page.getByLabel("Mot de passe").fill(password);
   await page.getByRole("button", { name: "Créer mon compte" }).click();
 
@@ -42,7 +42,7 @@ test("signup, log a task twice, delete one occurrence, sign out, sign back in", 
   await page.getByRole("button", { name: "Se déconnecter" }).click();
   await expect(page).toHaveURL("/login");
 
-  await page.getByLabel("Email").fill(email);
+  await page.getByLabel("Email", { exact: true }).fill(email);
   await page.getByLabel("Mot de passe").fill(password);
   await page.getByRole("button", { name: "Se connecter" }).click();
 

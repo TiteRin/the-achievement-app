@@ -25,7 +25,7 @@ test.afterAll(async () => {
 
 test("redirects a non-admin user away from /admin", async ({ page }) => {
   await page.goto("/signup");
-  await page.getByLabel("Email").fill(regularEmail);
+  await page.getByLabel("Email", { exact: true }).fill(regularEmail);
   await page.getByLabel("Mot de passe").fill(password);
   await page.getByRole("button", { name: "Créer mon compte" }).click();
   await expect(page).toHaveURL("/");
@@ -37,7 +37,7 @@ test("redirects a non-admin user away from /admin", async ({ page }) => {
 
 test("lets an admin view accounts and tasks", async ({ page }) => {
   await page.goto("/signup");
-  await page.getByLabel("Email").fill(adminEmail);
+  await page.getByLabel("Email", { exact: true }).fill(adminEmail);
   await page.getByLabel("Mot de passe").fill(password);
   await page.getByRole("button", { name: "Créer mon compte" }).click();
   await expect(page).toHaveURL("/");
@@ -52,7 +52,7 @@ test("lets an admin view accounts and tasks", async ({ page }) => {
   // after signing out and back in.
   await page.getByRole("button", { name: "Se déconnecter" }).click();
   await expect(page).toHaveURL("/login");
-  await page.getByLabel("Email").fill(adminEmail);
+  await page.getByLabel("Email", { exact: true }).fill(adminEmail);
   await page.getByLabel("Mot de passe").fill(password);
   await page.getByRole("button", { name: "Se connecter" }).click();
   await expect(page).toHaveURL("/");

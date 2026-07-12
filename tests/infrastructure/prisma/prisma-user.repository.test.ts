@@ -38,6 +38,27 @@ describe("PrismaUserRepository", () => {
     expect(found?.role).toBe("user");
   });
 
+  describe("findByEmail", () => {
+    it("returns null when no user has that email", async () => {
+      const result = await repository.findByEmail(`nobody-${crypto.randomUUID()}${EMAIL_SUFFIX}`);
+      expect(result).toBeNull();
+    });
+
+    it("finds a user by email", async () => {
+      const created = await prisma.user.create({
+        data: {
+          email: `by-email-${crypto.randomUUID()}${EMAIL_SUFFIX}`,
+          timezone: "Europe/Paris",
+        },
+      });
+
+      const found = await repository.findByEmail(created.email);
+
+      expect(found).toBeInstanceOf(User);
+      expect(found?.id).toBe(created.id);
+    });
+  });
+
   describe("findAll", () => {
     it("includes every user, regardless of who created them", async () => {
       const emailA = `all-a-${crypto.randomUUID()}${EMAIL_SUFFIX}`;
