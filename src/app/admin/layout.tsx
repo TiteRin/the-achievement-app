@@ -1,6 +1,8 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { auth } from "@/infrastructure/auth/auth";
+import { ThemeToggle } from "@/components/theme-toggle";
+import { readThemePreference } from "@/lib/theme.server";
 
 export default async function AdminLayout({
   children,
@@ -10,6 +12,8 @@ export default async function AdminLayout({
   const session = await auth();
   if (!session?.user) redirect("/login");
   if (session.user.role !== "admin") redirect("/");
+
+  const theme = await readThemePreference();
 
   return (
     <div className="flex min-h-full flex-1 flex-col bg-cozy-cream">
@@ -31,9 +35,12 @@ export default async function AdminLayout({
             </Link>
           </nav>
         </div>
-        <Link href="/" className="text-sm text-cozy-brown-soft hover:text-cozy-coral">
-          ← Retour à l&apos;app
-        </Link>
+        <div className="flex items-center gap-4">
+          <ThemeToggle initial={theme} />
+          <Link href="/" className="text-sm text-cozy-brown-soft hover:text-cozy-coral">
+            ← Retour à l&apos;app
+          </Link>
+        </div>
       </header>
       <main className="flex-1 px-6 py-6">{children}</main>
     </div>
