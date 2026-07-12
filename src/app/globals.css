@@ -1,6 +1,7 @@
 @import "tailwindcss";
 
 :root {
+  color-scheme: light dark;
   --cozy-cream: #fdf6ec;
   --cozy-cream-soft: #fbeee0;
   --cozy-surface: #ffffff;
@@ -12,8 +13,27 @@
   --cozy-brown-soft: #8a7362;
 }
 
+/* Explicit choice (theme toggle) takes priority over the OS preference below. */
+:root[data-theme="light"] {
+  color-scheme: light;
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --cozy-cream: #241d19;
+  --cozy-cream-soft: #2f2620;
+  --cozy-surface: #33281f;
+  --cozy-coral: #ff9d89;
+  --cozy-coral-soft: #4a2f29;
+  --cozy-sage: #a8d1ae;
+  --cozy-sage-soft: #33402f;
+  --cozy-brown: #f3e9dd;
+  --cozy-brown-soft: #c9b8a8;
+}
+
+/* No explicit choice ("system"): fall back to the OS preference. */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]):not([data-theme="dark"]) {
     --cozy-cream: #241d19;
     --cozy-cream-soft: #2f2620;
     --cozy-surface: #33281f;
