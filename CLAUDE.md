@@ -74,6 +74,20 @@ Both compose files pin an explicit top-level `name:` (`my-achievments` for dev, 
 
 `public/` has no real assets (favicon is served from `src/app/favicon.ico` via the App Router convention) but is kept with a tracked `.gitkeep` — Docker's `COPY --from=builder /app/public ./public` fails outright if the directory doesn't exist, and git doesn't track empty directories.
 
+### CI/CD
+
+`.github/workflows/ci.yml` runs 4 jobs in parallel on every PR to `main`/`develop` and on push to those branches: `lint`, `build` (needs a dummy `DATABASE_URL` for `prisma generate`, same trick as the Dockerfile), `unit-tests` and `e2e` (both spin up a real `postgres:16-alpine` service container and run `prisma migrate deploy` against it before testing — no mocks, matching how the test suite already works locally).
+
+**Branch protection** (GitHub → repo Settings → Branches → add a rule for each of `develop` and `main`): enable "Require status checks to pass before merging" and select all 4 job names. Those names only appear in the picker after the workflow has run at least once on a PR/branch — merge the PR that introduces `ci.yml` first, then go configure the rule. Claude can't do this step itself (no `gh` CLI/token in this environment, and it's a repo-admin setting anyway) — it's a one-time manual step.
+
+**Continuous deploy of `develop`**: Portainer here is on a local network/VPN, not reachable from GitHub's hosted runners, so this does *not* use a GitHub Actions → Portainer webhook. Instead, Portainer's own Git-polling ("GitOps updates") pulls from the repo on an interval — outbound-only, no inbound exposure needed:
+1. Portainer → Stacks → Add stack → **Repository** as the build method.
+2. Repository URL: this repo; Reference: `refs/heads/develop`; Compose path: `docker-compose.prod.yml`.
+3. Enable **GitOps updates**, mechanism **Polling**, interval e.g. 5 minutes.
+4. Set the stack's environment variables (`POSTGRES_PASSWORD`, `AUTH_SECRET`, `APP_PORT`, etc. — see `.env.example`) in the stack's env var UI, not a committed file.
+
+Because `develop` is protected (previous point), whatever Portainer picks up has already passed CI — deployment safety comes from the merge gate, not from Portainer re-running checks. If low-latency/on-push deploys are wanted later instead of polling, the alternative is a self-hosted GitHub Actions runner on the same network as Portainer (can reach it directly) — not set up, since it's meaningfully more infra than polling for not much benefit at this scale.
+
 ## Commits & branching
 
 - Claude never runs `git commit` (or anything that creates a commit, e.g. `git rebase --continue`, `git merge --no-edit`). Committing is the user's action.
