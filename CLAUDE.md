@@ -70,6 +70,8 @@ Self-hosted only (Docker/Portainer or OVH) — **never Vercel or Vercel-specific
 
 **`AUTH_TRUST_HOST=true` is required at runtime** (set in `docker-compose.prod.yml`) — without it, Auth.js v5 rejects every request with `UntrustedHost` as soon as the app isn't running on Vercel (which sets this automatically). Confirmed by actually running the built image against the real Postgres container, not just by building it — the image built fine and only failed at request time.
 
+Both compose files pin an explicit top-level `name:` (`my-achievments` for dev, `myachievments-prod` for the deploy stack). Without it, Compose derives the project name from the directory — the same directory for both files — so they'd resolve to the same project, network, and **volume**. Concretely: running `docker compose -f docker-compose.prod.yml up` would silently reuse dev's already-initialized `postgres-data` volume instead of creating its own, so `POSTGRES_PASSWORD` from `.env` would have no effect (Postgres only applies `POSTGRES_USER`/`POSTGRES_PASSWORD` on first init of an empty data directory) and `migrate` would fail with a Postgres auth error (`P1000`) against credentials that look right but don't match what's actually in the (dev's) volume. Hit this for real, not hypothetically — fixed by pinning distinct names, not by telling people to remember `-p`.
+
 `public/` has no real assets (favicon is served from `src/app/favicon.ico` via the App Router convention) but is kept with a tracked `.gitkeep` — Docker's `COPY --from=builder /app/public ./public` fails outright if the directory doesn't exist, and git doesn't track empty directories.
 
 ## Commits & branching

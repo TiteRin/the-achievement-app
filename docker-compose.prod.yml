@@ -1,15 +1,21 @@
+# Explicit project name so this stack's volumes/network/containers never
+# collide with docker-compose.yml's (the dev-only Postgres) when both are
+# run on the same host — they'd otherwise both default to the directory
+# name and silently share the same Postgres data volume.
+name: myachievements-prod
+
 services:
   postgres:
     image: postgres:16-alpine
     restart: unless-stopped
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:-myachievments}
+      POSTGRES_USER: ${POSTGRES_USER:-myachievements}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
-      POSTGRES_DB: ${POSTGRES_DB:-myachievments}
+      POSTGRES_DB: ${POSTGRES_DB:-myachievements}
     volumes:
       - postgres-data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-myachievments}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-myachievements}"]
       interval: 5s
       timeout: 5s
       retries: 10
