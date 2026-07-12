@@ -8,7 +8,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Mobile-first web app for logging daily accomplishments with unconditionally positive feedback (no punitive streaks, no broken chains on a missed day). Full specs are in [instructions.txt](instructions.txt).
 
-Status: domain layer, Prisma/Postgres infrastructure, credentials auth, the main `/` page, and the admin back-office are fully wired end-to-end (Phases 0–6). Magic-link sign-in and self-hosted deployment (Docker/Portainer) are not yet built — check `src/` before assuming a layer exists.
+Status: domain layer, Prisma/Postgres infrastructure, credentials auth, the main `/` page, the admin back-office, and self-hosted Docker deployment are fully wired end-to-end (Phases 0–7). Magic-link sign-in is the only piece from the original plan not yet built — check `src/` before assuming a layer exists.
 
 ## Commands
 
@@ -63,6 +63,16 @@ Tests live under `tests/`, mirroring the `src/` tree (e.g. `src/domain/task/task
 ## Hosting constraint
 
 Self-hosted only (Docker/Portainer or OVH) — **never Vercel or Vercel-specific APIs**. This is a deliberate, non-negotiable choice by the project owner, not an oversight. `next.config.ts` sets `output: "standalone"` for this reason; the `Dockerfile` is a standard multi-stage standalone build.
+
+### Deployment
+
+`docker-compose.yml` (dev-only: just Postgres, for `npm run dev`) and `docker-compose.prod.yml` (full stack: Postgres + a one-shot `migrate` job + the app) are separate files — don't conflate them. `Dockerfile` has three targets: `builder` (full `node_modules`, runs `prisma generate` against a dummy build-time `DATABASE_URL` then `next build`), `migrator` (= `builder` + `CMD npx prisma migrate deploy`), and `runner` (slim, `output: standalone` only, `CMD node server.js`). `migrator` deliberately reuses the full `builder` environment rather than cherry-picking the Prisma CLI into a slim image — the CLI needs `@prisma/engines` and other files that are easy to miss copying individually, confirmed by hitting exactly that `MODULE_NOT_FOUND` while building this out.
+
+**`AUTH_TRUST_HOST=true` is required at runtime** (set in `docker-compose.prod.yml`) — without it, Auth.js v5 rejects every request with `UntrustedHost` as soon as the app isn't running on Vercel (which sets this automatically). Confirmed by actually running the built image against the real Postgres container, not just by building it — the image built fine and only failed at request time.
+
+Both compose files pin an explicit top-level `name:` (`my-achievments` for dev, `myachievments-prod` for the deploy stack). Without it, Compose derives the project name from the directory — the same directory for both files — so they'd resolve to the same project, network, and **volume**. Concretely: running `docker compose -f docker-compose.prod.yml up` would silently reuse dev's already-initialized `postgres-data` volume instead of creating its own, so `POSTGRES_PASSWORD` from `.env` would have no effect (Postgres only applies `POSTGRES_USER`/`POSTGRES_PASSWORD` on first init of an empty data directory) and `migrate` would fail with a Postgres auth error (`P1000`) against credentials that look right but don't match what's actually in the (dev's) volume. Hit this for real, not hypothetically — fixed by pinning distinct names, not by telling people to remember `-p`.
+
+`public/` has no real assets (favicon is served from `src/app/favicon.ico` via the App Router convention) but is kept with a tracked `.gitkeep` — Docker's `COPY --from=builder /app/public ./public` fails outright if the directory doesn't exist, and git doesn't track empty directories.
 
 ## Commits & branching
 

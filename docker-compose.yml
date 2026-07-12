@@ -1,11 +1,16 @@
+# Pinned explicitly (matches the previous directory-derived default) so it
+# can never accidentally end up sharing a project name — and therefore a
+# Postgres data volume — with docker-compose.prod.yml.
+name: my-achievements
+
 services:
   postgres:
     image: postgres:16-alpine
     restart: unless-stopped
     environment:
-      POSTGRES_USER: myachievments
-      POSTGRES_PASSWORD: myachievments
-      POSTGRES_DB: myachievments
+      POSTGRES_USER: myachievements
+      POSTGRES_PASSWORD: myachievements
+      POSTGRES_DB: myachievements
     ports:
       - "${POSTGRES_PORT:-5432}:5432"
     volumes:
