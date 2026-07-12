@@ -1,8 +1,10 @@
 name: CI
 
 on:
+  # No branches filter: runs on every PR regardless of base branch, so
+  # stacked PRs (e.g. a feature branch targeting another unmerged feature
+  # branch, not yet main/develop) still get checked before merge.
   pull_request:
-    branches: [main, develop]
   push:
     branches: [main, develop]
 
@@ -62,6 +64,7 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
       - run: npm ci
+      - run: npx prisma generate
       - run: npx prisma migrate deploy
       - run: npx vitest run
 
@@ -92,6 +95,7 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
       - run: npm ci
+      - run: npx prisma generate
       - run: npx prisma migrate deploy
       - run: npx playwright install --with-deps chromium
       - run: npx playwright test
