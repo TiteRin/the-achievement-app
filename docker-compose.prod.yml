@@ -28,7 +28,7 @@ services:
       target: migrator
     restart: "no"
     environment:
-      DATABASE_URL: postgresql://${POSTGRES_USER:-myachievments}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-myachievments}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-myachievements}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-myachievements}
     depends_on:
       postgres:
         condition: service_healthy
@@ -39,11 +39,15 @@ services:
       target: runner
     restart: unless-stopped
     environment:
-      DATABASE_URL: postgresql://${POSTGRES_USER:-myachievments}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-myachievments}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-myachievements}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-myachievements}
       AUTH_SECRET: ${AUTH_SECRET:?Set AUTH_SECRET in .env}
       # Required for Auth.js v5 self-hosted behind a reverse proxy / non-Vercel
       # host — without it, every request is rejected as UntrustedHost.
       AUTH_TRUST_HOST: "true"
+      # Comma-separated emails auto-promoted to admin on next login. Optional
+      # — the app keeps working with none configured (falls back to the
+      # manual `UPDATE users SET role = 'admin' ...` path).
+      ADMIN_EMAILS: ${ADMIN_EMAILS:-}
     ports:
       - "${APP_PORT:-3000}:3000"
     depends_on:

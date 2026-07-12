@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { afterAll, afterEach, describe, expect, it } from "vitest";
+import { afterAll, afterEach, describe, expect, it, vi } from "vitest";
 import { prisma } from "@/infrastructure/prisma/client";
 import { registerUser, EmailAlreadyRegisteredError } from "@/infrastructure/auth/register-user";
 import { User } from "@/domain/user/user.entity";
@@ -7,6 +7,7 @@ import { User } from "@/domain/user/user.entity";
 const EMAIL_SUFFIX = "@register-user.test.local";
 
 afterEach(async () => {
+  vi.unstubAllEnvs();
   await prisma.user.deleteMany({ where: { email: { endsWith: EMAIL_SUFFIX } } });
 });
 
@@ -48,5 +49,19 @@ describe("registerUser", () => {
     await expect(registerUser(prisma, params)).rejects.toThrow(
       EmailAlreadyRegisteredError
     );
+  });
+
+  it("does not promote to admin at signup, even if ADMIN_EMAILS lists the email", async () => {
+    const email = `admin-signup-${crypto.randomUUID()}${EMAIL_SUFFIX}`;
+    vi.stubEnv("ADMIN_EMAILS", email);
+
+    const user = await registerUser(prisma, {
+      email,
+      password: "correct horse battery staple",
+      timezone: "Europe/Paris",
+      now: new Date("2026-03-05T10:00:00Z"),
+    });
+
+    expect(user.role).toBe("user");
   });
 });
