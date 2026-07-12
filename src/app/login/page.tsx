@@ -1,4 +1,5 @@
 import { LoginForm } from "@/components/login-form";
+import { MagicLinkForm } from "@/components/magic-link-form";
 
 export default function LoginPage() {
   return (
@@ -10,6 +11,14 @@ export default function LoginPage() {
         </p>
       </div>
       <LoginForm />
+
+      <div className="flex w-full max-w-sm items-center gap-3 text-xs text-cozy-brown-soft">
+        <span className="h-px flex-1 bg-cozy-brown/10" />
+        ou
+        <span className="h-px flex-1 bg-cozy-brown/10" />
+      </div>
+
+      <MagicLinkForm />
     </main>
   );
 }

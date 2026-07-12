@@ -48,6 +48,13 @@ services:
       # — the app keeps working with none configured (falls back to the
       # manual `UPDATE users SET role = 'admin' ...` path).
       ADMIN_EMAILS: ${ADMIN_EMAILS:-}
+      # SMTP for magic-link sign-in emails. Optional — password login keeps
+      # working without it; magic-link requests just fail to send.
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_FROM: ${SMTP_FROM:-The Achievement App <no-reply@example.com>}
     ports:
       - "${APP_PORT:-3000}:3000"
     depends_on:

@@ -1,14 +1,22 @@
 import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
+import Nodemailer from "next-auth/providers/nodemailer";
 import { prisma } from "@/infrastructure/prisma/client";
+import { PrismaUserRepository } from "@/infrastructure/prisma/prisma-user.repository";
 import { verifyCredentials } from "./verify-credentials";
 import { syncConfiguredAdminRole } from "./sync-admin-role";
+import { createMagicLinkAdapter } from "./magic-link-adapter";
+import { sendMagicLinkEmail } from "./send-magic-link-email";
+
+const userRepository = new PrismaUserRepository(prisma);
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   session: { strategy: "jwt" },
   pages: {
     signIn: "/login",
+    verifyRequest: "/login/check-email",
   },
+  adapter: createMagicLinkAdapter(userRepository, prisma),
   providers: [
     Credentials({
       credentials: {
@@ -34,6 +42,15 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           role: synced.role,
         };
       },
+    }),
+    Nodemailer({
+      server: {
+        host: process.env.SMTP_HOST,
+        port: Number(process.env.SMTP_PORT ?? "587"),
+        auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASSWORD },
+      },
+      from: process.env.SMTP_FROM ?? "The Achievement App <no-reply@localhost>",
+      sendVerificationRequest: (params) => sendMagicLinkEmail(userRepository, params),
     }),
   ],
   callbacks: {
