@@ -56,9 +56,11 @@ function reducer(state: LoggedTask[], action: OptimisticAction): LoggedTask[] {
 export function DailyLogBoard({
   initialTasks,
   isAdmin,
+  themeToggle,
 }: {
   initialTasks: TodayTaskDto[];
   isAdmin: boolean;
+  themeToggle: React.ReactNode;
 }) {
   const [optimisticTasks, applyOptimistic] = useOptimistic(
     initialTasks.map(toLoggedTask),
@@ -97,6 +99,7 @@ export function DailyLogBoard({
   return (
     <div className="mx-auto flex w-full max-w-md flex-1 flex-col gap-6 px-5 py-8">
       <header className="flex flex-col items-center gap-4">
+        <div className="flex w-full justify-end">{themeToggle}</div>
         <div className="text-center">
           <h1 className="text-2xl font-bold text-cozy-brown">
             The Achievement App
