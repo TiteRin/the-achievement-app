@@ -56,3 +56,9 @@ docker compose -f docker-compose.prod.yml up -d --build
 Point d'attention : Auth.js v5 rejette par défaut les requêtes dont l'hôte n'est pas reconnu (protection anti host-header-injection, permissive sur Vercel mais pas ailleurs). `docker-compose.prod.yml` positionne déjà `AUTH_TRUST_HOST=true` pour l'app — nécessaire dès qu'on est derrière un reverse proxy ou un nom de domaine non prévu à l'avance.
 
 Pour re-builder après un changement de code : `docker compose -f docker-compose.prod.yml up -d --build`.
+
+## CI/CD
+
+`.github/workflows/ci.yml` fait tourner 4 jobs en parallèle sur chaque PR vers `main`/`develop` (et sur push) : `lint`, `build`, `unit-tests` (avec un vrai Postgres de service), `e2e` (Playwright). `develop` et `main` doivent être configurées avec ces 4 checks comme obligatoires avant merge (GitHub → Settings → Branches — voir la note dans `CLAUDE.md` pour le détail).
+
+Déploiement continu de `develop` : Portainer n'étant pas exposé sur Internet, on utilise le GitOps polling intégré à Portainer (la stack va chercher les nouveaux commits elle-même, pas de webhook entrant nécessaire) plutôt qu'un déclenchement depuis GitHub Actions. Voir `CLAUDE.md` pour la procédure de création de la stack.
