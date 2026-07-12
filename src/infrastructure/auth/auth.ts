@@ -2,6 +2,7 @@ import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import { prisma } from "@/infrastructure/prisma/client";
 import { verifyCredentials } from "./verify-credentials";
+import { syncConfiguredAdminRole } from "./sync-admin-role";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   session: { strategy: "jwt" },
@@ -24,11 +25,13 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         const user = await verifyCredentials(prisma, { email, password });
         if (!user) return null;
 
+        const synced = await syncConfiguredAdminRole(prisma, user);
+
         return {
-          id: user.id,
-          email: user.email,
-          timezone: user.timezone,
-          role: user.role,
+          id: synced.id,
+          email: synced.email,
+          timezone: synced.timezone,
+          role: synced.role,
         };
       },
     }),
