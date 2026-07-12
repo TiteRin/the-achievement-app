@@ -1,26 +1,46 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --cozy-cream: #fdf6ec;
+  --cozy-cream-soft: #fbeee0;
+  --cozy-surface: #ffffff;
+  --cozy-coral: #ff8f7d;
+  --cozy-coral-soft: #ffe0d6;
+  --cozy-sage: #8fb996;
+  --cozy-sage-soft: #e3f0e3;
+  --cozy-brown: #5b4636;
+  --cozy-brown-soft: #8a7362;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --cozy-cream: #241d19;
+    --cozy-cream-soft: #2f2620;
+    --cozy-surface: #33281f;
+    --cozy-coral: #ff9d89;
+    --cozy-coral-soft: #4a2f29;
+    --cozy-sage: #a8d1ae;
+    --cozy-sage-soft: #33402f;
+    --cozy-brown: #f3e9dd;
+    --cozy-brown-soft: #c9b8a8;
   }
 }
 
+@theme inline {
+  --color-cozy-cream: var(--cozy-cream);
+  --color-cozy-cream-soft: var(--cozy-cream-soft);
+  --color-cozy-surface: var(--cozy-surface);
+  --color-cozy-coral: var(--cozy-coral);
+  --color-cozy-coral-soft: var(--cozy-coral-soft);
+  --color-cozy-sage: var(--cozy-sage);
+  --color-cozy-sage-soft: var(--cozy-sage-soft);
+  --color-cozy-brown: var(--cozy-brown);
+  --color-cozy-brown-soft: var(--cozy-brown-soft);
+  --font-sans: var(--font-quicksand);
+}
+
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--cozy-cream);
+  color: var(--cozy-brown);
+  font-family: var(--font-sans), sans-serif;
 }
