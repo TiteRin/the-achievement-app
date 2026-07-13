@@ -31,6 +31,7 @@ model Task {
   userId    String
   label     String
   labelKey  String
+  tags      String[] @default([])
   createdAt DateTime @default(now())
 
   user User      @relation(fields: [userId], references: [id], onDelete: Cascade)

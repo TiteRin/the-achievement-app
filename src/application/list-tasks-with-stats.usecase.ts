@@ -8,6 +8,7 @@ export type TaskStatsDto = {
   ownerEmail: string;
   totalLogs: number;
   createdAt: Date;
+  tags: string[];
 };
 
 const DELETED_ACCOUNT_PLACEHOLDER = "(compte supprimé)";
@@ -30,6 +31,7 @@ export async function listTasksWithStats(
       ownerEmail: emailByUserId.get(task.userId) ?? DELETED_ACCOUNT_PLACEHOLDER,
       totalLogs: await taskLogRepository.countByTaskId(task.id),
       createdAt: task.createdAt,
+      tags: task.tags,
     }))
   );
 }

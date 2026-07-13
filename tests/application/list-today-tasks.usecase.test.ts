@@ -54,8 +54,29 @@ describe("listTodayTasks", () => {
         label: "Boire de l'eau",
         countToday: 2,
         latestLogId: expect.any(String),
+        tags: [],
       },
     ]);
+  });
+
+  it("includes the task's tags", async () => {
+    const { taskRepository, taskLogRepository } = setup();
+    const now = new Date("2026-03-05T09:00:00Z");
+
+    await logTask(taskRepository, taskLogRepository, {
+      userId: "user-1",
+      timezone: "Europe/Paris",
+      label: "Faire la vaisselle #corvées",
+      now,
+    });
+
+    const result = await listTodayTasks(taskRepository, taskLogRepository, {
+      userId: "user-1",
+      timezone: "Europe/Paris",
+      now,
+    });
+
+    expect(result[0].tags).toEqual(["corvées"]);
   });
 
   it("excludes tasks with no log today", async () => {

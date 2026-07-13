@@ -46,6 +46,7 @@ describe("listTasksWithStats", () => {
       id: "task-1",
       userId: "user-1",
       label: "Faire la lessive",
+      tags: ["corvées"],
       createdAt,
     });
     await taskRepository.save(task);
@@ -69,6 +70,7 @@ describe("listTasksWithStats", () => {
         ownerEmail: "marine@example.com",
         totalLogs: 2,
         createdAt,
+        tags: ["corvées"],
       },
     ]);
   });

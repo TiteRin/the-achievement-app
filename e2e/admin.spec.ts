@@ -57,10 +57,16 @@ test("lets an admin view accounts and tasks", async ({ page }) => {
   await page.getByRole("button", { name: "Se connecter" }).click();
   await expect(page).toHaveURL("/");
 
+  await page.getByLabel("Nouvelle tâche accomplie").fill("Faire la vaisselle #corvées");
+  await page.getByRole("button", { name: "C'est fait !" }).click();
+  await expect(page.getByText("Faire la vaisselle")).toBeVisible();
+
   await page.getByRole("link", { name: "Back-office" }).click();
   await expect(page).toHaveURL("/admin/accounts");
   await expect(page.getByText(adminEmail)).toBeVisible();
 
   await page.getByRole("link", { name: "Tâches" }).click();
   await expect(page).toHaveURL("/admin/tasks");
+  const row = page.getByRole("row").filter({ hasText: "Faire la vaisselle" });
+  await expect(row.getByText("#corvées")).toBeVisible();
 });

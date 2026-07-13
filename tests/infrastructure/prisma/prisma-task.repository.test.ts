@@ -67,6 +67,52 @@ describe("PrismaTaskRepository", () => {
     ).rejects.toThrow();
   });
 
+  describe("tags", () => {
+    it("defaults to an empty array when omitted", async () => {
+      const task = Task.create({ id: crypto.randomUUID(), userId, label: "Lire", createdAt: new Date() });
+      await repository.save(task);
+
+      const found = await repository.findById(task.id);
+
+      expect(found?.tags).toEqual([]);
+    });
+
+    it("round-trips tags on save and find", async () => {
+      const task = Task.create({
+        id: crypto.randomUUID(),
+        userId,
+        label: "Faire la vaisselle",
+        tags: ["corvées", "maison"],
+        createdAt: new Date(),
+      });
+      await repository.save(task);
+
+      const found = await repository.findById(task.id);
+
+      expect(found?.tags).toEqual(["corvées", "maison"]);
+    });
+
+    it("persists updated tags when saving over an existing id", async () => {
+      const id = crypto.randomUUID();
+      await repository.save(
+        Task.create({ id, userId, label: "Faire la vaisselle", tags: ["corvées"], createdAt: new Date() })
+      );
+
+      await repository.save(
+        Task.create({
+          id,
+          userId,
+          label: "Faire la vaisselle",
+          tags: ["corvées", "maison"],
+          createdAt: new Date(),
+        })
+      );
+      const found = await repository.findById(id);
+
+      expect(found?.tags).toEqual(["corvées", "maison"]);
+    });
+  });
+
   describe("findById", () => {
     it("returns null when no task matches the id", async () => {
       const result = await repository.findById(crypto.randomUUID());
