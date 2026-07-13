@@ -5,6 +5,7 @@ import { auth, signOut } from "@/infrastructure/auth/auth";
 import { taskRepository, taskLogRepository } from "@/infrastructure/prisma/repositories";
 import { logTask, type LoggedTaskDto } from "@/application/log-task.usecase";
 import { removeTodayLog } from "@/application/remove-today-log.usecase";
+import { viewDay, type ViewDayDto } from "@/application/view-day.usecase";
 
 async function requireSession() {
   const session = await auth();
@@ -37,6 +38,17 @@ export async function removeTodayLogAction(logId: string): Promise<void> {
   });
 
   refresh();
+}
+
+export async function viewDayAction(day: string): Promise<ViewDayDto> {
+  const session = await requireSession();
+
+  return viewDay(taskRepository, taskLogRepository, {
+    userId: session.user.id,
+    timezone: session.user.timezone,
+    now: new Date(),
+    day,
+  });
 }
 
 export async function signOutAction(): Promise<void> {

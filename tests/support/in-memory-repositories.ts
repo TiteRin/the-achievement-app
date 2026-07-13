@@ -74,6 +74,19 @@ export class InMemoryTaskLogRepository implements TaskLogRepository {
     );
   }
 
+  async findByTaskAndDayKey(taskId: string, dayKeyStr: string, timezone: string) {
+    return this.logs.filter(
+      (log) => log.taskId === taskId && dayKey(log.loggedAt, timezone) === dayKeyStr
+    );
+  }
+
+  async findLoggedDayKeys(taskIds: string[], timezone: string) {
+    const keys = this.logs
+      .filter((log) => taskIds.includes(log.taskId))
+      .map((log) => dayKey(log.loggedAt, timezone));
+    return [...new Set(keys)].sort();
+  }
+
   async countByTaskId(taskId: string) {
     return this.logs.filter((log) => log.taskId === taskId).length;
   }
