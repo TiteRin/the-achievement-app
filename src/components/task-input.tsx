@@ -31,7 +31,7 @@ export function TaskInput({
       <motion.button
         type="submit"
         whileTap={{ scale: 0.92 }}
-        className="whitespace-nowrap rounded-full bg-cozy-coral px-5 py-3 font-semibold text-white shadow-md shadow-cozy-coral/30"
+        className="whitespace-nowrap rounded-full bg-cozy-coral px-5 py-3 font-semibold text-cozy-cream shadow-md shadow-cozy-coral/30"
       >
         C&apos;est fait !
       </motion.button>

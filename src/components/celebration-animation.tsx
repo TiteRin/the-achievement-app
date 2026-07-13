@@ -14,7 +14,10 @@ export function CelebrationAnimation({ burstId }: { burstId: number | null }) {
   const particles = Array.from({ length: 6 }, (_, i) => i);
 
   return (
-    <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+    <div
+      aria-hidden="true"
+      className="pointer-events-none absolute inset-0 flex items-center justify-center"
+    >
       <AnimatePresence>
         {burstId !== null && (
           <motion.div key={burstId} className="relative h-0 w-0">

@@ -30,7 +30,7 @@ export function SignupForm() {
       <button
         type="submit"
         disabled={pending}
-        className="rounded-full bg-cozy-coral px-6 py-3 font-semibold text-white shadow-md shadow-cozy-coral/30 disabled:opacity-60"
+        className="rounded-full bg-cozy-coral px-6 py-3 font-semibold text-cozy-cream shadow-md shadow-cozy-coral/30 disabled:opacity-60"
       >
         {pending ? "Création..." : "Créer mon compte"}
       </button>

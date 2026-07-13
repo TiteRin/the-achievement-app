@@ -57,9 +57,12 @@ test("lets an admin view accounts and tasks", async ({ page }) => {
   await page.getByRole("button", { name: "Se connecter" }).click();
   await expect(page).toHaveURL("/");
 
-  await page.getByLabel("Nouvelle tâche accomplie").fill("Faire la vaisselle #corvées");
+  // Unique label so this row can't collide with real tasks logged in the
+  // same shared dev/CI database by another account.
+  const taggedTaskLabel = `Tâche e2e admin ${Date.now()}`;
+  await page.getByLabel("Nouvelle tâche accomplie").fill(`${taggedTaskLabel} #corvées`);
   await page.getByRole("button", { name: "C'est fait !" }).click();
-  await expect(page.getByText("Faire la vaisselle")).toBeVisible();
+  await expect(page.getByText(taggedTaskLabel)).toBeVisible();
 
   await page.getByRole("link", { name: "Back-office" }).click();
   await expect(page).toHaveURL("/admin/accounts");
@@ -67,6 +70,6 @@ test("lets an admin view accounts and tasks", async ({ page }) => {
 
   await page.getByRole("link", { name: "Tâches" }).click();
   await expect(page).toHaveURL("/admin/tasks");
-  const row = page.getByRole("row").filter({ hasText: "Faire la vaisselle" });
+  const row = page.getByRole("row").filter({ hasText: taggedTaskLabel });
   await expect(row.getByText("#corvées")).toBeVisible();
 });
