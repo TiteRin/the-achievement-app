@@ -9,6 +9,11 @@ export default defineConfig({
   use: {
     baseURL: "http://localhost:3000",
     trace: "on-first-retry",
+    // The app defaults to French for a visitor with no locale cookie, but
+    // resolves it from Accept-Language when there isn't one — without this,
+    // headless Chromium's default locale (often en-US) would flip every
+    // test to English and break the existing French text assertions.
+    locale: "fr-FR",
   },
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
   webServer: {

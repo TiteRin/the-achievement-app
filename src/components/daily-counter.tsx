@@ -3,7 +3,7 @@
 import { useEffect, useRef } from "react";
 import { motion, useAnimation } from "motion/react";
 
-export function DailyCounter({ count, isToday }: { count: number; isToday: boolean }) {
+export function DailyCounter({ count, label }: { count: number; label: string }) {
   const controls = useAnimation();
   const isFirstRender = useRef(true);
 
@@ -29,9 +29,7 @@ export function DailyCounter({ count, isToday }: { count: number; isToday: boole
           {count}
         </motion.span>
       </div>
-      <p className="text-sm font-medium text-cozy-brown-soft">
-        {count <= 1 ? "victoire" : "victoires"} {isToday ? "aujourd'hui" : "ce jour-là"}
-      </p>
+      <p className="text-sm font-medium text-cozy-brown-soft">{label}</p>
     </div>
   );
 }

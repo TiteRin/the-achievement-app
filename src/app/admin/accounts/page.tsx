@@ -1,33 +1,36 @@
+import { getFormatter, getTranslations } from "next-intl/server";
 import { userRepository } from "@/infrastructure/prisma/repositories";
 import { listAccounts } from "@/application/list-accounts.usecase";
 import { AdminTable } from "@/components/admin-table";
 
 export default async function AdminAccountsPage() {
   const accounts = await listAccounts(userRepository);
+  const t = await getTranslations("admin.accounts");
+  const format = await getFormatter();
 
   return (
     <AdminTable
-      title="Comptes"
+      title={t("title")}
       rows={accounts}
-      emptyMessage="Aucun compte."
+      emptyMessage={t("empty")}
       rowKey={(account) => account.id}
       columns={[
-        { header: "Email", render: (account) => account.email, className: "text-cozy-brown" },
+        { header: t("email"), render: (account) => account.email, className: "text-cozy-brown" },
         {
-          header: "Rôle",
+          header: t("role"),
           render: (account) =>
             account.role === "admin" ? (
               <span className="rounded-full bg-cozy-coral-soft px-2 py-0.5 text-xs font-semibold text-cozy-coral">
-                admin
+                {t("roleAdmin")}
               </span>
             ) : (
-              <span className="text-cozy-brown-soft">user</span>
+              <span className="text-cozy-brown-soft">{t("roleUser")}</span>
             ),
         },
-        { header: "Fuseau horaire", render: (account) => account.timezone },
+        { header: t("timezone"), render: (account) => account.timezone },
         {
-          header: "Créé le",
-          render: (account) => account.createdAt.toLocaleDateString("fr-FR"),
+          header: t("createdAt"),
+          render: (account) => format.dateTime(account.createdAt, { dateStyle: "short" }),
         },
       ]}
     />

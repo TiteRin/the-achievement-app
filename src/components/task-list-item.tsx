@@ -1,6 +1,7 @@
 "use client";
 
 import { motion } from "motion/react";
+import { useTranslations } from "next-intl";
 import { TagList } from "@/components/tag-list";
 
 export type LoggedTask = {
@@ -21,6 +22,8 @@ export function TaskListItem({
   // server-side is worse UX than not showing one.
   onDelete?: (task: LoggedTask) => void;
 }) {
+  const t = useTranslations("board");
+
   return (
     <motion.li
       layout
@@ -42,7 +45,7 @@ export function TaskListItem({
           <button
             type="button"
             onClick={() => onDelete(task)}
-            aria-label={`Supprimer ${task.label}`}
+            aria-label={t("deleteTask", { label: task.label })}
             className="flex h-7 w-7 items-center justify-center rounded-full text-cozy-brown-soft transition-colors hover:bg-cozy-cream-soft hover:text-cozy-coral"
           >
             ×

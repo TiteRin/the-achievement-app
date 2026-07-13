@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
+import { useTranslations } from "next-intl";
 import { requestMagicLinkAction, type MagicLinkState } from "@/app/login/actions";
 import { AuthTextField } from "@/components/auth-text-field";
 import { FormError } from "@/components/form-error";
@@ -9,6 +10,7 @@ const initialState: MagicLinkState = { error: null };
 
 export function MagicLinkForm() {
   const [state, action, pending] = useActionState(requestMagicLinkAction, initialState);
+  const t = useTranslations("auth");
 
   return (
     <form action={action} className="flex w-full max-w-sm flex-col gap-3">
@@ -16,8 +18,8 @@ export function MagicLinkForm() {
         type="email"
         name="email"
         required
-        placeholder="Email"
-        aria-label="Email pour le lien de connexion"
+        placeholder={t("emailLabel")}
+        aria-label={t("magicLink.emailLabel")}
       />
 
       <FormError message={state.error} />
@@ -27,7 +29,7 @@ export function MagicLinkForm() {
         disabled={pending}
         className="rounded-full border border-cozy-coral px-6 py-3 font-semibold text-cozy-coral disabled:opacity-60"
       >
-        {pending ? "Envoi..." : "Recevoir un lien de connexion"}
+        {pending ? t("magicLink.submitPending") : t("magicLink.submit")}
       </button>
     </form>
   );

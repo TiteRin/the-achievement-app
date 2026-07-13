@@ -1,13 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { applyTheme, type ThemePreference } from "@/lib/theme";
-
-const OPTIONS: { value: ThemePreference; label: string }[] = [
-  { value: "system", label: "Système" },
-  { value: "light", label: "Clair" },
-  { value: "dark", label: "Sombre" },
-];
 
 function ThemeIcon({ value }: { value: ThemePreference }) {
   if (value === "light") {
@@ -45,6 +40,13 @@ function ThemeIcon({ value }: { value: ThemePreference }) {
 
 export function ThemeToggle({ initial }: { initial: ThemePreference }) {
   const [theme, setTheme] = useState(initial);
+  const t = useTranslations("common.theme");
+
+  const OPTIONS: { value: ThemePreference; label: string }[] = [
+    { value: "system", label: t("system") },
+    { value: "light", label: t("light") },
+    { value: "dark", label: t("dark") },
+  ];
 
   function select(next: ThemePreference) {
     setTheme(next);
@@ -54,7 +56,7 @@ export function ThemeToggle({ initial }: { initial: ThemePreference }) {
   return (
     <div
       role="group"
-      aria-label="Thème"
+      aria-label={t("label")}
       className="inline-flex items-center gap-0.5 rounded-full bg-cozy-cream-soft p-1"
     >
       {OPTIONS.map((option) => {
