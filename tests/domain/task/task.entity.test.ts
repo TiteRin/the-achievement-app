@@ -26,4 +26,23 @@ describe("Task.create", () => {
       EmptyTaskLabelError
     );
   });
+
+  it("defaults tags to an empty array", () => {
+    const task = Task.create({ ...baseParams, label: "Lire" });
+    expect(task.tags).toEqual([]);
+  });
+
+  it("stores the given tags", () => {
+    const task = Task.create({ ...baseParams, label: "Lire", tags: ["lecture", "loisir"] });
+    expect(task.tags).toEqual(["lecture", "loisir"]);
+  });
+
+  it("defensively normalizes and dedupes tags even when passed unclean input", () => {
+    const task = Task.create({
+      ...baseParams,
+      label: "Lire",
+      tags: [" Lecture ", "LECTURE", "Loisir"],
+    });
+    expect(task.tags).toEqual(["lecture", "loisir"]);
+  });
 });

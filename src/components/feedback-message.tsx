@@ -19,7 +19,10 @@ export function FeedbackMessage({
   }, [toast, onDismiss]);
 
   return (
-    <div className="pointer-events-none flex h-14 items-center justify-center">
+    <div
+      role="status"
+      className="pointer-events-none flex h-14 items-center justify-center"
+    >
       <AnimatePresence>
         {toast && (
           <motion.p

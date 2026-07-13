@@ -5,12 +5,21 @@
   --cozy-cream: #fdf6ec;
   --cozy-cream-soft: #fbeee0;
   --cozy-surface: #ffffff;
-  --cozy-coral: #ff8f7d;
+  /* Darker than the original pastel coral/sage/brown-soft on purpose: at
+     the original values, coral/sage text-on-soft-background pairs and the
+     white-on-coral solid buttons all failed WCAG AA contrast (as low as
+     1.78:1, need 4.5:1 for normal text) — measured, not eyeballed. These
+     shades keep the same hue family while clearing 4.5:1+ everywhere
+     they're used as text/foreground (see the review in CLAUDE.md). The
+     "-soft" pale variants are backgrounds only, never text, so they're
+     unchanged.
+  */
+  --cozy-coral: #b03d28;
   --cozy-coral-soft: #ffe0d6;
-  --cozy-sage: #8fb996;
+  --cozy-sage: #3f6548;
   --cozy-sage-soft: #e3f0e3;
   --cozy-brown: #5b4636;
-  --cozy-brown-soft: #8a7362;
+  --cozy-brown-soft: #7a6252;
 }
 
 /* Explicit choice (theme toggle) takes priority over the OS preference below. */

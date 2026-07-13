@@ -38,11 +38,13 @@ export class PrismaTaskRepository implements TaskRepository {
         userId: task.userId,
         label: task.label,
         labelKey: labelKey(task.label),
+        tags: task.tags,
         createdAt: task.createdAt,
       },
       update: {
         label: task.label,
         labelKey: labelKey(task.label),
+        tags: task.tags,
       },
     });
   }
@@ -52,12 +54,14 @@ function toDomain(record: {
   id: string;
   userId: string;
   label: string;
+  tags: string[];
   createdAt: Date;
 }): Task {
   return Task.create({
     id: record.id,
     userId: record.userId,
     label: record.label,
+    tags: record.tags,
     createdAt: record.createdAt,
   });
 }

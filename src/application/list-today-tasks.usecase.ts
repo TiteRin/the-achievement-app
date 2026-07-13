@@ -6,6 +6,7 @@ export type TodayTaskDto = {
   label: string;
   countToday: number;
   latestLogId: string;
+  tags: string[];
 };
 
 export async function listTodayTasks(
@@ -33,5 +34,6 @@ export async function listTodayTasks(
       label: task.label,
       countToday: logs.length,
       latestLogId: logs[logs.length - 1].id,
+      tags: task.tags,
     }));
 }

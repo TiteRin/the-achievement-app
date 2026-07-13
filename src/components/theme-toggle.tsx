@@ -53,7 +53,7 @@ export function ThemeToggle({ initial }: { initial: ThemePreference }) {
 
   return (
     <div
-      role="radiogroup"
+      role="group"
       aria-label="Thème"
       className="inline-flex items-center gap-0.5 rounded-full bg-cozy-cream-soft p-1"
     >
@@ -63,8 +63,7 @@ export function ThemeToggle({ initial }: { initial: ThemePreference }) {
           <button
             key={option.value}
             type="button"
-            role="radio"
-            aria-checked={active}
+            aria-pressed={active}
             aria-label={option.label}
             title={option.label}
             onClick={() => select(option.value)}

@@ -7,6 +7,7 @@ export type LoggedTaskDto = {
   label: string;
   countToday: number;
   logId: string;
+  tags: string[];
 };
 
 export async function logTask(
@@ -22,5 +23,6 @@ export async function logTask(
     label: result.task.label,
     countToday: result.countToday,
     logId: result.log.id,
+    tags: result.task.tags,
   };
 }

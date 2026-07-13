@@ -9,13 +9,14 @@ import { TaskListItem, type LoggedTask } from "@/components/task-list-item";
 import { FeedbackMessage, type FeedbackToast } from "@/components/feedback-message";
 import { CelebrationAnimation } from "@/components/celebration-animation";
 import { SignOutButton } from "@/components/sign-out-button";
-import { labelKey, normalizeLabel } from "@/domain/task/label";
+import { labelKey } from "@/domain/task/label";
+import { extractTags, mergeTags } from "@/domain/task/tag";
 import { randomPositiveMessage } from "@/lib/positive-messages";
 import { logTaskAction, removeTodayLogAction } from "@/app/actions";
 import type { TodayTaskDto } from "@/application/list-today-tasks.usecase";
 
 type OptimisticAction =
-  | { type: "log"; label: string }
+  | { type: "log"; label: string; tags: string[] }
   | { type: "remove"; id: string };
 
 // `id` is the normalized label key, not the database task id: it's the one
@@ -28,6 +29,7 @@ function toLoggedTask(dto: TodayTaskDto): LoggedTask {
     label: dto.label,
     count: dto.countToday,
     latestLogId: dto.latestLogId,
+    tags: dto.tags,
   };
 }
 
@@ -37,11 +39,13 @@ function reducer(state: LoggedTask[], action: OptimisticAction): LoggedTask[] {
     const existing = state.find((task) => task.id === key);
     if (existing) {
       return state.map((task) =>
-        task.id === key ? { ...task, count: task.count + 1 } : task
+        task.id === key
+          ? { ...task, count: task.count + 1, tags: mergeTags(task.tags, action.tags) }
+          : task
       );
     }
     return [
-      { id: key, label: normalizeLabel(action.label), count: 1, latestLogId: "" },
+      { id: key, label: action.label, count: 1, latestLogId: "", tags: action.tags },
       ...state,
     ];
   }
@@ -73,14 +77,17 @@ export function DailyLogBoard({
   const dailyTotal = optimisticTasks.reduce((sum, task) => sum + task.count, 0);
 
   const handleLog = useCallback(
-    (label: string) => {
+    (rawLabel: string) => {
+      const { label, tags } = extractTags(rawLabel);
+      if (!label) return;
+
       const eventId = Date.now();
       setToast({ id: eventId, text: randomPositiveMessage() });
       setBurstId(eventId);
 
       startTransition(async () => {
-        applyOptimistic({ type: "log", label });
-        await logTaskAction(label);
+        applyOptimistic({ type: "log", label, tags });
+        await logTaskAction(rawLabel);
       });
     },
     [applyOptimistic]
