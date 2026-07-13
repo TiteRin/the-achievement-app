@@ -26,7 +26,7 @@ export function TaskInput({
         onChange={(event) => setValue(event.target.value)}
         placeholder="Qu'as-tu fait ?"
         aria-label="Nouvelle tâche accomplie"
-        className="flex-1 rounded-full bg-cozy-surface px-5 py-3 text-cozy-brown placeholder:text-cozy-brown-soft shadow-inner shadow-cozy-brown/5 outline-none ring-2 ring-transparent focus:ring-cozy-coral transition-shadow"
+        className="min-w-0 flex-1 rounded-full bg-cozy-surface px-5 py-3 text-cozy-brown placeholder:text-cozy-brown-soft shadow-inner shadow-cozy-brown/5 outline-none ring-2 ring-transparent focus:ring-cozy-coral transition-shadow"
       />
       <motion.button
         type="submit"

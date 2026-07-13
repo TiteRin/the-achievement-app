@@ -107,6 +107,108 @@ describe("PrismaTaskLogRepository", () => {
     expect(logsToday).toHaveLength(0);
   });
 
+  describe("findByTaskAndDayKey", () => {
+    it("finds logs matching the given day-key", async () => {
+      await repository.save(
+        TaskLog.create({ id: crypto.randomUUID(), taskId, loggedAt: new Date("2026-03-05T09:00:00Z") })
+      );
+
+      const logs = await repository.findByTaskAndDayKey(taskId, "2026-03-05", "Europe/Paris");
+
+      expect(logs).toHaveLength(1);
+    });
+
+    it("excludes logs from a different day-key", async () => {
+      await repository.save(
+        TaskLog.create({ id: crypto.randomUUID(), taskId, loggedAt: new Date("2026-03-04T09:00:00Z") })
+      );
+
+      const logs = await repository.findByTaskAndDayKey(taskId, "2026-03-05", "Europe/Paris");
+
+      expect(logs).toHaveLength(0);
+    });
+
+    it("respects the timezone for the day boundary near midnight", async () => {
+      // 23:30 UTC on March 5th is already March 6th in Paris.
+      await repository.save(
+        TaskLog.create({ id: crypto.randomUUID(), taskId, loggedAt: new Date("2026-03-05T23:30:00Z") })
+      );
+
+      const logsMarch6Paris = await repository.findByTaskAndDayKey(taskId, "2026-03-06", "Europe/Paris");
+      const logsMarch5Paris = await repository.findByTaskAndDayKey(taskId, "2026-03-05", "Europe/Paris");
+
+      expect(logsMarch6Paris).toHaveLength(1);
+      expect(logsMarch5Paris).toHaveLength(0);
+    });
+
+    it("finds a day-key far in the past, well outside any instant-centered window", async () => {
+      await repository.save(
+        TaskLog.create({ id: crypto.randomUUID(), taskId, loggedAt: new Date("2020-01-15T09:00:00Z") })
+      );
+
+      const logs = await repository.findByTaskAndDayKey(taskId, "2020-01-15", "Europe/Paris");
+
+      expect(logs).toHaveLength(1);
+    });
+  });
+
+  describe("findLoggedDayKeys", () => {
+    it("returns an empty array when there are no logs", async () => {
+      const keys = await repository.findLoggedDayKeys([taskId], "Europe/Paris");
+      expect(keys).toEqual([]);
+    });
+
+    it("returns the distinct sorted day-keys across the given tasks", async () => {
+      const otherTask = await prisma.task.create({
+        data: {
+          userId: (await prisma.task.findUniqueOrThrow({ where: { id: taskId } })).userId,
+          label: "Courir",
+          labelKey: "courir",
+        },
+      });
+
+      await repository.save(
+        TaskLog.create({ id: crypto.randomUUID(), taskId, loggedAt: new Date("2026-03-05T09:00:00Z") })
+      );
+      await repository.save(
+        // Same day as above, same task — should not produce a duplicate key.
+        TaskLog.create({ id: crypto.randomUUID(), taskId, loggedAt: new Date("2026-03-05T18:00:00Z") })
+      );
+      await repository.save(
+        TaskLog.create({
+          id: crypto.randomUUID(),
+          taskId: otherTask.id,
+          loggedAt: new Date("2026-03-01T09:00:00Z"),
+        })
+      );
+
+      const keys = await repository.findLoggedDayKeys([taskId, otherTask.id], "Europe/Paris");
+
+      expect(keys).toEqual(["2026-03-01", "2026-03-05"]);
+    });
+
+    it("ignores logs belonging to tasks outside the given set", async () => {
+      const otherTask = await prisma.task.create({
+        data: {
+          userId: (await prisma.task.findUniqueOrThrow({ where: { id: taskId } })).userId,
+          label: "Courir",
+          labelKey: "courir",
+        },
+      });
+      await repository.save(
+        TaskLog.create({
+          id: crypto.randomUUID(),
+          taskId: otherTask.id,
+          loggedAt: new Date("2026-03-01T09:00:00Z"),
+        })
+      );
+
+      const keys = await repository.findLoggedDayKeys([taskId], "Europe/Paris");
+
+      expect(keys).toEqual([]);
+    });
+  });
+
   describe("findById", () => {
     it("returns null when no log matches the id", async () => {
       const result = await repository.findById(crypto.randomUUID());

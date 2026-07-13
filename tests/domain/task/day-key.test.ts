@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { dayKey } from "@/domain/task/day-key";
+import { dayKey, findAdjacentDayKey } from "@/domain/task/day-key";
 
 describe("dayKey", () => {
   it("formats an instant as YYYY-MM-DD in the given timezone", () => {
@@ -25,5 +25,44 @@ describe("dayKey", () => {
     expect(dayKey(new Date("2026-03-05T23:30:00Z"), "Europe/Paris")).toBe(
       "2026-03-06"
     );
+  });
+});
+
+describe("findAdjacentDayKey", () => {
+  const days = ["2026-03-01", "2026-03-05", "2026-03-10"];
+
+  it("finds the closest previous day", () => {
+    expect(findAdjacentDayKey(days, "2026-03-10", "previous")).toBe("2026-03-05");
+  });
+
+  it("finds the closest next day", () => {
+    expect(findAdjacentDayKey(days, "2026-03-01", "next")).toBe("2026-03-05");
+  });
+
+  it("returns null when there is no previous day", () => {
+    expect(findAdjacentDayKey(days, "2026-03-01", "previous")).toBeNull();
+  });
+
+  it("returns null when there is no next day", () => {
+    expect(findAdjacentDayKey(days, "2026-03-10", "next")).toBeNull();
+  });
+
+  it("skips over days not in the set (gaps are just absent, not empty placeholders)", () => {
+    expect(findAdjacentDayKey(days, "2026-03-07", "previous")).toBe("2026-03-05");
+    expect(findAdjacentDayKey(days, "2026-03-07", "next")).toBe("2026-03-10");
+  });
+
+  it("ignores a key equal to the reference itself", () => {
+    expect(findAdjacentDayKey(days, "2026-03-05", "previous")).toBe("2026-03-01");
+    expect(findAdjacentDayKey(days, "2026-03-05", "next")).toBe("2026-03-10");
+  });
+
+  it("works regardless of input order", () => {
+    const shuffled = ["2026-03-10", "2026-03-01", "2026-03-05"];
+    expect(findAdjacentDayKey(shuffled, "2026-03-10", "previous")).toBe("2026-03-05");
+  });
+
+  it("returns null for an empty set", () => {
+    expect(findAdjacentDayKey([], "2026-03-05", "previous")).toBeNull();
   });
 });

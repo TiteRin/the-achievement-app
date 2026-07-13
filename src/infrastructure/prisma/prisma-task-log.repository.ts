@@ -8,6 +8,14 @@ import type { PrismaClient } from "./generated/client";
 // then decided precisely by `dayKey`, the same function the domain uses.
 const WINDOW_MARGIN_MS = 26 * 60 * 60 * 1000;
 
+// A day-key (e.g. "2026-03-05") isn't tied to a specific instant, so its
+// safe UTC window is computed from the calendar date itself rather than
+// from a reference instant: someone at UTC+14 starts that local day 14h
+// before UTC midnight, someone at UTC-12 doesn't finish it until 36h after.
+const HOUR_MS = 60 * 60 * 1000;
+const DAY_KEY_WINDOW_BEFORE_MS = 14 * HOUR_MS;
+const DAY_KEY_WINDOW_AFTER_MS = 36 * HOUR_MS;
+
 export class PrismaTaskLogRepository implements TaskLogRepository {
   constructor(private readonly client: PrismaClient) {}
 
@@ -42,6 +50,39 @@ export class PrismaTaskLogRepository implements TaskLogRepository {
     return records
       .filter((record) => dayKey(record.loggedAt, timezone) === referenceKey)
       .map(toDomain);
+  }
+
+  async findByTaskAndDayKey(
+    taskId: string,
+    dayKeyStr: string,
+    timezone: string
+  ): Promise<TaskLog[]> {
+    const dayStart = new Date(`${dayKeyStr}T00:00:00Z`);
+    const records = await this.client.taskLog.findMany({
+      where: {
+        taskId,
+        loggedAt: {
+          gte: new Date(dayStart.getTime() - DAY_KEY_WINDOW_BEFORE_MS),
+          lte: new Date(dayStart.getTime() + DAY_KEY_WINDOW_AFTER_MS),
+        },
+      },
+    });
+
+    return records
+      .filter((record) => dayKey(record.loggedAt, timezone) === dayKeyStr)
+      .map(toDomain);
+  }
+
+  async findLoggedDayKeys(taskIds: string[], timezone: string): Promise<string[]> {
+    if (taskIds.length === 0) return [];
+
+    const records = await this.client.taskLog.findMany({
+      where: { taskId: { in: taskIds } },
+      select: { loggedAt: true },
+    });
+
+    const keys = new Set(records.map((record) => dayKey(record.loggedAt, timezone)));
+    return [...keys].sort();
   }
 
   async countByTaskId(taskId: string): Promise<number> {

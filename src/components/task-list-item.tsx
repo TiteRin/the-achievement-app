@@ -16,7 +16,10 @@ export function TaskListItem({
   onDelete,
 }: {
   task: LoggedTask;
-  onDelete: (task: LoggedTask) => void;
+  // Omitted entirely (not just disabled) when viewing a past day — past
+  // logs are immutable, so offering a delete button that would just fail
+  // server-side is worse UX than not showing one.
+  onDelete?: (task: LoggedTask) => void;
 }) {
   return (
     <motion.li
@@ -35,14 +38,16 @@ export function TaskListItem({
             </span>
           )}
         </span>
-        <button
-          type="button"
-          onClick={() => onDelete(task)}
-          aria-label={`Supprimer ${task.label}`}
-          className="flex h-7 w-7 items-center justify-center rounded-full text-cozy-brown-soft transition-colors hover:bg-cozy-cream-soft hover:text-cozy-coral"
-        >
-          ×
-        </button>
+        {onDelete && (
+          <button
+            type="button"
+            onClick={() => onDelete(task)}
+            aria-label={`Supprimer ${task.label}`}
+            className="flex h-7 w-7 items-center justify-center rounded-full text-cozy-brown-soft transition-colors hover:bg-cozy-cream-soft hover:text-cozy-coral"
+          >
+            ×
+          </button>
+        )}
       </div>
       <TagList tags={task.tags} />
     </motion.li>
