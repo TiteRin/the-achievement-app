@@ -4,6 +4,8 @@ import { useActionState } from "react";
 import Link from "next/link";
 import { signupAction, type SignupState } from "@/app/signup/actions";
 import { TimezoneField } from "@/components/timezone-field";
+import { AuthTextField } from "@/components/auth-text-field";
+import { FormError } from "@/components/form-error";
 
 const initialState: SignupState = { error: null };
 
@@ -12,30 +14,18 @@ export function SignupForm() {
 
   return (
     <form action={action} className="flex w-full max-w-sm flex-col gap-4">
-      <input
-        type="email"
-        name="email"
-        required
-        placeholder="Email"
-        aria-label="Email"
-        className="rounded-full bg-cozy-surface px-5 py-3 text-cozy-brown placeholder:text-cozy-brown-soft shadow-inner shadow-cozy-brown/5 outline-none ring-2 ring-transparent focus:ring-cozy-coral transition-shadow"
-      />
-      <input
+      <AuthTextField type="email" name="email" required placeholder="Email" aria-label="Email" />
+      <AuthTextField
         type="password"
         name="password"
         required
         minLength={8}
         placeholder="Mot de passe (8 caractères min.)"
         aria-label="Mot de passe"
-        className="rounded-full bg-cozy-surface px-5 py-3 text-cozy-brown placeholder:text-cozy-brown-soft shadow-inner shadow-cozy-brown/5 outline-none ring-2 ring-transparent focus:ring-cozy-coral transition-shadow"
       />
       <TimezoneField />
 
-      {state.error && (
-        <p role="alert" className="text-center text-sm text-cozy-coral">
-          {state.error}
-        </p>
-      )}
+      <FormError message={state.error} />
 
       <button
         type="submit"

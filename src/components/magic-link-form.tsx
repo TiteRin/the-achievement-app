@@ -2,6 +2,8 @@
 
 import { useActionState } from "react";
 import { requestMagicLinkAction, type MagicLinkState } from "@/app/login/actions";
+import { AuthTextField } from "@/components/auth-text-field";
+import { FormError } from "@/components/form-error";
 
 const initialState: MagicLinkState = { error: null };
 
@@ -10,20 +12,15 @@ export function MagicLinkForm() {
 
   return (
     <form action={action} className="flex w-full max-w-sm flex-col gap-3">
-      <input
+      <AuthTextField
         type="email"
         name="email"
         required
         placeholder="Email"
         aria-label="Email pour le lien de connexion"
-        className="rounded-full bg-cozy-surface px-5 py-3 text-cozy-brown placeholder:text-cozy-brown-soft shadow-inner shadow-cozy-brown/5 outline-none ring-2 ring-transparent focus:ring-cozy-coral transition-shadow"
       />
 
-      {state.error && (
-        <p role="alert" className="text-center text-sm text-cozy-coral">
-          {state.error}
-        </p>
-      )}
+      <FormError message={state.error} />
 
       <button
         type="submit"

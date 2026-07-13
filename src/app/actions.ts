@@ -2,14 +2,9 @@
 
 import { refresh } from "next/cache";
 import { auth, signOut } from "@/infrastructure/auth/auth";
-import { prisma } from "@/infrastructure/prisma/client";
-import { PrismaTaskRepository } from "@/infrastructure/prisma/prisma-task.repository";
-import { PrismaTaskLogRepository } from "@/infrastructure/prisma/prisma-task-log.repository";
+import { taskRepository, taskLogRepository } from "@/infrastructure/prisma/repositories";
 import { logTask, type LoggedTaskDto } from "@/application/log-task.usecase";
 import { removeTodayLog } from "@/application/remove-today-log.usecase";
-
-const taskRepository = new PrismaTaskRepository(prisma);
-const taskLogRepository = new PrismaTaskLogRepository(prisma);
 
 async function requireSession() {
   const session = await auth();
