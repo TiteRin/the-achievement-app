@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { motion } from "motion/react";
+import { useTranslations } from "next-intl";
 
 export function TaskInput({
   onSubmit,
@@ -9,6 +10,7 @@ export function TaskInput({
   onSubmit: (label: string) => void;
 }) {
   const [value, setValue] = useState("");
+  const t = useTranslations("board");
 
   function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
@@ -24,8 +26,8 @@ export function TaskInput({
         type="text"
         value={value}
         onChange={(event) => setValue(event.target.value)}
-        placeholder="Qu'as-tu fait ?"
-        aria-label="Nouvelle tâche accomplie"
+        placeholder={t("taskPlaceholder")}
+        aria-label={t("taskInputLabel")}
         className="min-w-0 flex-1 rounded-full bg-cozy-surface px-5 py-3 text-cozy-brown placeholder:text-cozy-brown-soft shadow-inner shadow-cozy-brown/5 outline-none ring-2 ring-transparent focus:ring-cozy-coral transition-shadow"
       />
       <motion.button
@@ -33,7 +35,7 @@ export function TaskInput({
         whileTap={{ scale: 0.92 }}
         className="whitespace-nowrap rounded-full bg-cozy-coral px-5 py-3 font-semibold text-cozy-cream shadow-md shadow-cozy-coral/30"
       >
-        C&apos;est fait !
+        {t("submit")}
       </motion.button>
     </form>
   );

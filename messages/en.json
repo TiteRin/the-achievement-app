@@ -1,0 +1,91 @@
+{
+  "common": {
+    "appName": "The Achievement App",
+    "tagline": "Celebrate every small victory of the day.",
+    "boardTagline": "Every small victory counts.",
+    "backOffice": "Back office",
+    "signOut": "Sign out",
+    "theme": {
+      "label": "Theme",
+      "system": "System",
+      "light": "Light",
+      "dark": "Dark"
+    }
+  },
+  "auth": {
+    "emailLabel": "Email",
+    "passwordLabel": "Password",
+    "passwordPlaceholder": "Password",
+    "passwordMinPlaceholder": "Password (8 characters min.)",
+    "login": {
+      "title": "Welcome back",
+      "submit": "Log in",
+      "submitPending": "Logging in...",
+      "noAccount": "Don't have an account yet?",
+      "createAccount": "Create an account",
+      "or": "or"
+    },
+    "signup": {
+      "title": "Join the adventure",
+      "submit": "Create my account",
+      "submitPending": "Creating...",
+      "hasAccount": "Already have an account?",
+      "login": "Log in"
+    },
+    "magicLink": {
+      "emailLabel": "Email for the sign-in link",
+      "submit": "Get a sign-in link",
+      "submitPending": "Sending..."
+    },
+    "checkEmail": {
+      "title": "Check your inbox",
+      "body": "If an account exists with that address, a sign-in link has just been sent to it.",
+      "backToLogin": "Back to login"
+    },
+    "errors": {
+      "invalidForm": "Invalid form.",
+      "invalidCredentials": "Incorrect email or password.",
+      "genericError": "Something went wrong, please try again later.",
+      "passwordTooShort": "Password must be at least 8 characters long.",
+      "emailAlreadyRegistered": "An account already exists with this email."
+    }
+  },
+  "board": {
+    "taskPlaceholder": "What did you get done?",
+    "taskInputLabel": "New accomplished task",
+    "submit": "Done!",
+    "deleteTask": "Delete {label}",
+    "victoryCount": "{count, plural, one {victory} other {victories}} {when, select, today {today} other {that day}}",
+    "empty": "Nothing logged yet — start with one small victory ✨",
+    "previousDay": "Previous day",
+    "nextDay": "Next day",
+    "positiveMessages": ["Awesome!", "Terrific!", "Incredible!", "Fantastic!", "Well done!"]
+  },
+  "admin": {
+    "backToApp": "← Back to the app",
+    "nav": {
+      "accounts": "Accounts",
+      "tasks": "Tasks"
+    },
+    "accounts": {
+      "title": "Accounts",
+      "empty": "No accounts.",
+      "email": "Email",
+      "role": "Role",
+      "timezone": "Timezone",
+      "createdAt": "Created on",
+      "roleAdmin": "admin",
+      "roleUser": "user"
+    },
+    "tasks": {
+      "title": "Tasks",
+      "empty": "No tasks.",
+      "label": "Task",
+      "owner": "Owner",
+      "logCount": "Log count",
+      "tags": "Tags",
+      "noTags": "—",
+      "createdAt": "Created on"
+    }
+  }
+}

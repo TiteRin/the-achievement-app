@@ -4,7 +4,9 @@ import { taskRepository, taskLogRepository } from "@/infrastructure/prisma/repos
 import { viewDay } from "@/application/view-day.usecase";
 import { DailyLogBoard } from "@/components/daily-log-board";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { LocaleToggle } from "@/components/locale-toggle";
 import { readThemePreference } from "@/lib/theme.server";
+import { readLocalePreference } from "@/lib/locale.server";
 
 export default async function Home() {
   const session = await auth();
@@ -16,6 +18,7 @@ export default async function Home() {
     now: new Date(),
   });
   const theme = await readThemePreference();
+  const localePreference = await readLocalePreference();
 
   return (
     <main className="flex flex-1 flex-col bg-cozy-cream">
@@ -23,6 +26,7 @@ export default async function Home() {
         initialView={initialView}
         isAdmin={session.user.role === "admin"}
         themeToggle={<ThemeToggle initial={theme} />}
+        localeToggle={<LocaleToggle initial={localePreference} />}
       />
     </main>
   );

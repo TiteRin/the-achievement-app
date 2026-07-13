@@ -1,0 +1,91 @@
+{
+  "common": {
+    "appName": "The Achievement App",
+    "tagline": "Célèbre chaque petite victoire du jour.",
+    "boardTagline": "Chaque petite victoire compte.",
+    "backOffice": "Back-office",
+    "signOut": "Se déconnecter",
+    "theme": {
+      "label": "Thème",
+      "system": "Système",
+      "light": "Clair",
+      "dark": "Sombre"
+    }
+  },
+  "auth": {
+    "emailLabel": "Email",
+    "passwordLabel": "Mot de passe",
+    "passwordPlaceholder": "Mot de passe",
+    "passwordMinPlaceholder": "Mot de passe (8 caractères min.)",
+    "login": {
+      "title": "Content de te revoir",
+      "submit": "Se connecter",
+      "submitPending": "Connexion...",
+      "noAccount": "Pas encore de compte ?",
+      "createAccount": "Créer un compte",
+      "or": "ou"
+    },
+    "signup": {
+      "title": "Rejoins l'aventure",
+      "submit": "Créer mon compte",
+      "submitPending": "Création...",
+      "hasAccount": "Déjà un compte ?",
+      "login": "Se connecter"
+    },
+    "magicLink": {
+      "emailLabel": "Email pour le lien de connexion",
+      "submit": "Recevoir un lien de connexion",
+      "submitPending": "Envoi..."
+    },
+    "checkEmail": {
+      "title": "Vérifie ta boîte mail",
+      "body": "Si un compte existe avec cette adresse, un lien de connexion vient de lui être envoyé.",
+      "backToLogin": "Retour à la connexion"
+    },
+    "errors": {
+      "invalidForm": "Formulaire invalide.",
+      "invalidCredentials": "Email ou mot de passe incorrect.",
+      "genericError": "Une erreur est survenue, réessaie plus tard.",
+      "passwordTooShort": "Le mot de passe doit contenir au moins 8 caractères.",
+      "emailAlreadyRegistered": "Un compte existe déjà avec cet email."
+    }
+  },
+  "board": {
+    "taskPlaceholder": "Qu'as-tu fait ?",
+    "taskInputLabel": "Nouvelle tâche accomplie",
+    "submit": "C'est fait !",
+    "deleteTask": "Supprimer {label}",
+    "victoryCount": "{count, plural, one {victoire} other {victoires}} {when, select, today {aujourd'hui} other {ce jour-là}}",
+    "empty": "Rien loggé pour l'instant — commence par une petite victoire ✨",
+    "previousDay": "Jour précédent",
+    "nextDay": "Jour suivant",
+    "positiveMessages": ["Génial !", "Félicitations !", "Incroyable !", "Superbe !", "Bravo !"]
+  },
+  "admin": {
+    "backToApp": "← Retour à l'app",
+    "nav": {
+      "accounts": "Comptes",
+      "tasks": "Tâches"
+    },
+    "accounts": {
+      "title": "Comptes",
+      "empty": "Aucun compte.",
+      "email": "Email",
+      "role": "Rôle",
+      "timezone": "Fuseau horaire",
+      "createdAt": "Créé le",
+      "roleAdmin": "admin",
+      "roleUser": "user"
+    },
+    "tasks": {
+      "title": "Tâches",
+      "empty": "Aucune tâche.",
+      "label": "Tâche",
+      "owner": "Propriétaire",
+      "logCount": "Nb de logs",
+      "tags": "Tags",
+      "noTags": "—",
+      "createdAt": "Créée le"
+    }
+  }
+}
