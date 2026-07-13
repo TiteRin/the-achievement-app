@@ -15,8 +15,8 @@ jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
@@ -29,8 +29,8 @@ jobs:
       # prisma generate only needs a syntactically valid URL, it never connects.
       DATABASE_URL: "postgresql://build:build@localhost:5432/build"
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
@@ -58,8 +58,8 @@ jobs:
       DATABASE_URL: "postgresql://myachievments:myachievments@localhost:5432/myachievments"
       AUTH_SECRET: "ci-test-secret-not-for-real-use"
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
@@ -89,8 +89,8 @@ jobs:
       AUTH_SECRET: "ci-test-secret-not-for-real-use"
       AUTH_TRUST_HOST: "true"
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
