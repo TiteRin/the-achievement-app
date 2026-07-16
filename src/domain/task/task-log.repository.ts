@@ -14,6 +14,11 @@ export interface TaskLogRepository {
     timezone: string
   ): Promise<TaskLog[]>;
   findLoggedDayKeys(taskIds: string[], timezone: string): Promise<string[]>;
+  findLoggedDayKeysByUserAndTag(
+    userId: string,
+    tag: string,
+    timezone: string
+  ): Promise<string[]>;
   countByTaskId(taskId: string): Promise<number>;
   delete(logId: string): Promise<void>;
 }

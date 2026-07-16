@@ -59,6 +59,13 @@ export class InMemoryTaskRepository implements TaskRepository {
 export class InMemoryTaskLogRepository implements TaskLogRepository {
   logs: TaskLog[] = [];
 
+  // Optional: a TaskLog only knows its taskId, not the owning task's userId
+  // or tags, so resolving "which tasks carry this tag, for this user" needs
+  // a reference to where tasks live — mirroring how the real Prisma
+  // implementation resolves the same thing via the DB relation instead of
+  // duplicating userId/tags onto every log.
+  constructor(private readonly taskRepository?: InMemoryTaskRepository) {}
+
   async findById(id: string) {
     return this.logs.find((log) => log.id === id) ?? null;
   }
@@ -83,6 +90,18 @@ export class InMemoryTaskLogRepository implements TaskLogRepository {
   async findLoggedDayKeys(taskIds: string[], timezone: string) {
     const keys = this.logs
       .filter((log) => taskIds.includes(log.taskId))
+      .map((log) => dayKey(log.loggedAt, timezone));
+    return [...new Set(keys)].sort();
+  }
+
+  async findLoggedDayKeysByUserAndTag(userId: string, tag: string, timezone: string) {
+    const taskIds = new Set(
+      (this.taskRepository?.tasks ?? [])
+        .filter((task) => task.userId === userId && task.tags.includes(tag))
+        .map((task) => task.id)
+    );
+    const keys = this.logs
+      .filter((log) => taskIds.has(log.taskId))
       .map((log) => dayKey(log.loggedAt, timezone));
     return [...new Set(keys)].sort();
   }
