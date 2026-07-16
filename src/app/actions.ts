@@ -6,6 +6,7 @@ import { taskRepository, taskLogRepository } from "@/infrastructure/prisma/repos
 import { logTask, type LoggedTaskDto } from "@/application/log-task.usecase";
 import { removeTodayLog } from "@/application/remove-today-log.usecase";
 import { viewDay, type ViewDayDto } from "@/application/view-day.usecase";
+import { listAllTasks, type ListAllTasksDto } from "@/application/list-all-tasks.usecase";
 
 async function requireSession() {
   const session = await auth();
@@ -48,6 +49,15 @@ export async function viewDayAction(day: string): Promise<ViewDayDto> {
     timezone: session.user.timezone,
     now: new Date(),
     day,
+  });
+}
+
+export async function listAllTasksAction(): Promise<ListAllTasksDto> {
+  const session = await requireSession();
+
+  return listAllTasks(taskRepository, taskLogRepository, {
+    userId: session.user.id,
+    timezone: session.user.timezone,
   });
 }
 
