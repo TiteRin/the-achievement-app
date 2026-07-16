@@ -17,14 +17,15 @@
         "id": "2",
         "title": "Add tag-scoped day-key repository query",
         "description": "Extend TaskLogRepository with a method to find all logged day-keys for tasks carrying a specific tag, supporting tag-level streak calculations",
-        "details": "Add to `src/domain/task/task-log.repository.ts` interface:\n```typescript\nfindLoggedDayKeysByUserAndTag(\n  userId: string,\n  tag: string,\n  timezone: string\n): Promise<string[]>\n```\n\nImplement in `src/infrastructure/prisma/prisma-task-log.repository.ts`:\n- Join TaskLog → Task WHERE Task.userId = ? AND ? = ANY(Task.tags)\n- Convert each TaskLog.loggedAt to day-key using the timezone (reuse `dayKey()` helper)\n- Return distinct sorted day-keys\n- Single query (not N+1) - use Postgres array containment operator `@>` or `ANY`\n\nSQL shape:\n```sql\nSELECT DISTINCT task_logs.logged_at\nFROM task_logs\nJOIN tasks ON task_logs.task_id = tasks.id\nWHERE tasks.user_id = $1 AND $2 = ANY(tasks.tags)\nORDER BY logged_at\n```\n\nMap results to day-keys using `dayKey(loggedAt, timezone)`.",
-        "testStrategy": "Integration test in `tests/infrastructure/prisma/prisma-task-log.repository.test.ts`:\n- Create user with 3 tasks: two tagged #work, one tagged #personal\n- Log #work tasks on 2026-01-01, 2026-01-03; #personal on 2026-01-02\n- Query for #work → expect [\"2026-01-01\", \"2026-01-03\"]\n- Query for #personal → expect [\"2026-01-02\"]\n- Query for nonexistent tag → expect []\n- Test timezone handling (log at UTC boundary, query in Europe/Paris)",
-        "priority": "high",
+        "status": "done",
         "dependencies": [
           "1"
         ],
-        "status": "pending",
-        "subtasks": []
+        "priority": "high",
+        "details": "✅ **COMPLETED** - Implemented `findLoggedDayKeysByUserAndTag(userId, tag, timezone)` in the TaskLogRepository interface and both repository implementations.\n\n**Interface** (`src/domain/task/task-log.repository.ts:17-21`):\n```typescript\nfindLoggedDayKeysByUserAndTag(\n  userId: string,\n  tag: string,\n  timezone: string\n): Promise<string[]>\n```\n\n**Prisma implementation** (`src/infrastructure/prisma/prisma-task-log.repository.ts:88-100`):\n- Uses Prisma relation filter: `task: { userId, tags: { has: tag } }` (not raw SQL)\n- Single query (no N+1), consistent with existing `findLoggedDayKeys` pattern\n- Fetches `loggedAt` values, computes `dayKey()` in JS, dedupes via Set, sorts\n- Leverages Prisma's array containment operator (`tags: { has: tag }`)\n\n**In-memory test fake** (`tests/support/in-memory-repositories.ts:67,97-107`):\n- Extended `InMemoryTaskLogRepository` constructor to accept optional `TaskRepository` reference\n- Needed because TaskLog only knows `taskId`, not userId/tags — resolves via taskRepository just like Prisma uses DB relations\n- Backward compatible (optional param) — no changes needed to 5 existing call sites\n- Filters tasks by userId + tag membership, collects their IDs, maps logs to day-keys\n\n**Implementation pattern:** Mirrors `findLoggedDayKeys` (fetch loggedAt → map to dayKey → dedupe+sort), not the raw-SQL approach originally sketched in this task's initial details.",
+        "testStrategy": "✅ **PASSING** - 5 new integration tests in `tests/infrastructure/prisma/prisma-task-log.repository.test.ts:212-306`:\n\n1. **Tag grouping** (lines 213-240): 2 tasks tagged #work logged on 2026-03-01 and 2026-03-03, 1 task tagged #personal logged on 2026-03-02 → query #work returns [\"2026-03-01\", \"2026-03-03\"], #personal returns [\"2026-03-02\"]\n2. **Nonexistent tag** (lines 242-250): Query for tag no task carries → returns []\n3. **Same-day deduplication** (lines 252-271): 2 different tasks both tagged #chores, both logged on 2026-03-05 at different times → returns [\"2026-03-05\"] (single entry, not duplicated)\n4. **Cross-user isolation** (lines 273-288): Other user's task with same tag → requesting user's query returns [] (doesn't leak across users)\n5. **Timezone midnight boundary** (lines 290-305): Log at 2026-03-05T23:30Z (March 6 in Paris, March 5 UTC) → Paris query returns [\"2026-03-06\"], UTC query returns [\"2026-03-05\"]\n\nFull suite: **179 tests passing** (was 174 before this task), lint clean, no regressions.",
+        "subtasks": [],
+        "updatedAt": "2026-07-16T09:18:13.558Z"
       },
       {
         "id": "3",
@@ -145,9 +146,9 @@
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-07-16T08:07:12.544Z",
+      "lastModified": "2026-07-16T09:18:13.558Z",
       "taskCount": 11,
-      "completedCount": 1,
+      "completedCount": 2,
       "tags": [
         "master"
       ]

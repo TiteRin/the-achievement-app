@@ -85,6 +85,20 @@ export class PrismaTaskLogRepository implements TaskLogRepository {
     return [...keys].sort();
   }
 
+  async findLoggedDayKeysByUserAndTag(
+    userId: string,
+    tag: string,
+    timezone: string
+  ): Promise<string[]> {
+    const records = await this.client.taskLog.findMany({
+      where: { task: { userId, tags: { has: tag } } },
+      select: { loggedAt: true },
+    });
+
+    const keys = new Set(records.map((record) => dayKey(record.loggedAt, timezone)));
+    return [...keys].sort();
+  }
+
   async countByTaskId(taskId: string): Promise<number> {
     return this.client.taskLog.count({ where: { taskId } });
   }
