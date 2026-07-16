@@ -2,125 +2,126 @@
   "master": {
     "tasks": [
       {
-        "id": 1,
+        "id": "1",
         "title": "Build cadence-detection and best-ever-streak engine",
         "description": "Create a pure domain-layer utility that takes a task's logged day-keys, estimates typical interval (median/mode gap), and derives the adaptive-granularity streak (day/week/month reframing) that never breaks",
-        "details": "Implement in `src/domain/task/cadence.ts` as pure functions (no framework dependencies). Core functions needed:\n\n1. `estimateCadence(dayKeys: string[]): { intervalDays: number }` - analyze gaps between consecutive logged days, return median/mode interval\n2. `calculateBestStreak(dayKeys: string[], granularity: 'day' | 'week' | 'month'): number` - count consecutive intervals at given granularity\n3. `adaptiveStreak(dayKeys: string[]): { value: number; unit: 'day' | 'week' | 'month' }` - try daily streak first, fall back to weekly if broken, then monthly, return the longest unbroken chain\n\nAlgorithm:\n- Parse day-keys (already \"YYYY-MM-DD\" format, sortable)\n- Calculate day gaps between consecutive entries\n- For each granularity, check if intervals fit within tolerance (e.g., daily = 1±0 days, weekly = 7±3 days, monthly = 28-31 days)\n- Return the finest granularity with an unbroken chain, counting only the longest continuous run\n- Never return 0 - always find SOME granularity that holds\n\nExport all functions with full TypeScript types. Mirror existing patterns from `day-key.ts` (pure, no side effects).",
-        "testStrategy": "Unit tests in `tests/domain/task/cadence.test.ts` against synthetic fixtures:\n- Daily-rhythm task (logged every 1-2 days) → streak in days\n- Weekly-rhythm task (logged every 7±2 days) → streak in weeks\n- Monthly task (logged every 28-31 days) → streak in months\n- Irregular task (gaps 1,3,10,2,7 days) → falls back to coarsest granularity\n- Edge cases: single log, two logs same day, empty array\nValidate that output never reads as \"broken\" (no zero streaks)",
-        "priority": "high",
+        "status": "done",
         "dependencies": [],
-        "status": "pending",
-        "subtasks": []
+        "priority": "high",
+        "details": "✅ **COMPLETED** - Implemented in `src/domain/task/cadence.ts` as pure functions with no framework dependencies.\n\n**Core exports:**\n- `estimateCadence(dayKeys: string[]): { intervalDays: number }` - analyzes gaps between consecutive logged days, returns median interval (unused internally but preserved for future 'due now' detection in quick-add v2)\n- `adaptiveStreak(dayKeys: string[]): { value: number; unit: 'day' | 'week' | 'month' }` - computes tail run independently at each granularity, reports the largest value with tie-breaking toward finer units\n- Supporting types: `StreakUnit`, `Streak`\n\n**Design decisions (revised after user feedback):**\n- **Simpler algorithm**: Compute the tail-anchored run independently for day/week/month, then report whichever has the largest value. Ties break toward the smallest/finest unit (e.g., a single log has day=week=month=1, day wins).\n- **No gap-free requirement**: Unlike the previous approach, there's no need to check if the entire history is gap-free at a granularity before escalating. A weekly-rhythm task naturally wins on \"week\" because its own day-tail-run never grows past 1.\n- **Anchored to most recent log**: For each granularity, the tail run counts backwards from the most recent bucket while consecutive. This makes the streak reflect whether the user is *currently* keeping up their rhythm, not a frozen historical max.\n- **Week bucketing (FIXED)**: Weeks now snap each date to its own Monday (via ISO day-of-week: Mon=0..Sun=6) before dividing by 7, ensuring all dates within the same real calendar week land in the same bucket. The previous epoch-anchored fixed window (Math.floor(epochDay/7)) had an arbitrary boundary that could fall mid-week, causing tasks logged twice within a single real week (e.g., Monday+Thursday) to straddle that boundary and get miscounted as spanning two separate buckets, inflating the week-count by a phantom extra bucket. Verified by hand: 4 real weeks of Monday+Thursday logs now correctly produce 4 week-buckets, not 5.\n- **Month bucketing**: Months use real calendar months (year×12 + month) since users implicitly think \"this month vs last month\".\n\n**Algorithm:**\n1. Parse day-keys (already \"YYYY-MM-DD\" format), dedupe, sort\n2. Convert to epoch days (days since 1970-01-01)\n3. For each granularity (day, week, month):\n   - Convert epoch days to buckets:\n     - day: identity (epochDay)\n     - week: snap to Monday first, then divide by 7\n     - month: year×12 + month\n   - Compute `tailRun(buckets)` - count backwards from most recent while consecutive\n4. Return the candidate with the largest value; ties prefer the finer unit (day > week > month)\n\n**Files created:**\n- `src/domain/task/cadence.ts` (82 lines)\n- `tests/domain/task/cadence.test.ts` (190 lines, 17 tests)\n\n**Test coverage:**\n- `estimateCadence` (5 tests): empty/single log (1-day default), daily cadence, weekly cadence, median handles outliers, order/duplicate independence\n- `adaptiveStreak` (8 tests): empty (0 days), single log (1 day with tie-breaking verification), perfect daily streak, weekly rhythm (once per week), monthly rhythm, day streak preferred over incidental month adjacency, order/duplicate independence\n- `adaptiveStreak — plain-language scenarios (documentation)` (4 new tests added): 10 days straight → 10 days, twice a week for 4 weeks → 4 weeks, once a month for 6 months → 6 months, daily with one miss → tail reflects last 4 consecutive days. These are explicitly redundant with the surgical tests above but kept for human readability and behavior documentation.\n\n**Status: 174 tests passing (was 170), lint clean. Week-bucketing bug fixed via Monday-anchoring.**",
+        "testStrategy": "✅ **PASSING** - 17 unit tests in `tests/domain/task/cadence.test.ts` (was 13), full suite at 174 tests (was 170):\n\n**estimateCadence tests (5):**\n- Empty/single log → 1-day default\n- Daily cadence from consecutive days → 1\n- Weekly cadence from 7-day gaps → 7\n- Median handles outliers (gaps 1,1,10 → median 1, not mean 4)\n- Order/duplicate independence\n\n**adaptiveStreak tests (8):**\n- Empty history → {value: 0, unit: \"day\"}\n- Single log → {value: 1, unit: \"day\"}\n- **Tie-breaking verification** → single log has day=week=month=1, day must win\n- Perfect daily streak (5 consecutive days) → {value: 5, unit: \"day\"}\n- Weekly rhythm (4 logs exactly 7 days apart) → {value: 4, unit: \"week\"}\n- Monthly rhythm (3 logs once per month) → {value: 3, unit: \"month\"}\n- Day streak preferred over incidental month adjacency (Jan 1 + Apr 1-2) → {value: 2, unit: \"day\"}\n- Order/duplicate independence\n\n**adaptiveStreak — plain-language scenarios (4 new documentation tests):**\n- 10 days logged consecutively → {value: 10, unit: \"day\"}\n- Twice a week (Mon+Thu) for 4 weeks → {value: 4, unit: \"week\"} (verified the week-bucketing fix: Monday+Thursday within the same week now correctly count as one bucket, not two)\n- Once a month for 6 months → {value: 6, unit: \"month\"}\n- 10 days straight, miss one day, then 4 more days → {value: 4, unit: \"day\"} (tail-anchored to the most recent consecutive run)\n\n**All edge cases validated:** never returns 0 for tasks with ≥1 log, handles duplicates, order-independent, tie-breaking correctly favors finer granularity, week-bucketing now correctly aligns to real calendar weeks via Monday-anchoring.",
+        "subtasks": [],
+        "updatedAt": "2026-07-16T08:07:12.544Z"
       },
       {
-        "id": 2,
+        "id": "2",
         "title": "Add tag-scoped day-key repository query",
         "description": "Extend TaskLogRepository with a method to find all logged day-keys for tasks carrying a specific tag, supporting tag-level streak calculations",
         "details": "Add to `src/domain/task/task-log.repository.ts` interface:\n```typescript\nfindLoggedDayKeysByUserAndTag(\n  userId: string,\n  tag: string,\n  timezone: string\n): Promise<string[]>\n```\n\nImplement in `src/infrastructure/prisma/prisma-task-log.repository.ts`:\n- Join TaskLog → Task WHERE Task.userId = ? AND ? = ANY(Task.tags)\n- Convert each TaskLog.loggedAt to day-key using the timezone (reuse `dayKey()` helper)\n- Return distinct sorted day-keys\n- Single query (not N+1) - use Postgres array containment operator `@>` or `ANY`\n\nSQL shape:\n```sql\nSELECT DISTINCT task_logs.logged_at\nFROM task_logs\nJOIN tasks ON task_logs.task_id = tasks.id\nWHERE tasks.user_id = $1 AND $2 = ANY(tasks.tags)\nORDER BY logged_at\n```\n\nMap results to day-keys using `dayKey(loggedAt, timezone)`.",
         "testStrategy": "Integration test in `tests/infrastructure/prisma/prisma-task-log.repository.test.ts`:\n- Create user with 3 tasks: two tagged #work, one tagged #personal\n- Log #work tasks on 2026-01-01, 2026-01-03; #personal on 2026-01-02\n- Query for #work → expect [\"2026-01-01\", \"2026-01-03\"]\n- Query for #personal → expect [\"2026-01-02\"]\n- Query for nonexistent tag → expect []\n- Test timezone handling (log at UTC boundary, query in Europe/Paris)",
         "priority": "high",
         "dependencies": [
-          1
+          "1"
         ],
         "status": "pending",
         "subtasks": []
       },
       {
-        "id": 3,
+        "id": "3",
         "title": "Build responsive All Tasks panel component (read-only)",
         "description": "Create a slide-in panel (bottom sheet on mobile, right sidebar on desktop) that lists all user tasks grouped by tag, showing all-time count and best-ever streak per task/tag",
         "details": "New component: `src/components/all-tasks-panel.tsx` as `\"use client\"`\n\nProps:\n```typescript\ntype AllTasksPanelProps = {\n  isOpen: boolean;\n  onClose: () => void;\n  tasks: Array<{\n    id: string;\n    label: string;\n    tags: string[];\n    allTimeCount: number;\n    bestStreak: { value: number; unit: 'day' | 'week' | 'month' };\n  }>;\n  tagStreaks: Map<string, { value: number; unit: string }>;\n};\n```\n\nLayout:\n- Use `motion.div` with slide animation (from bottom on mobile via `@media (max-width: 768px)`, from right on desktop)\n- Desktop: `fixed right-0 top-0 h-screen w-80` pushing main content left (not overlay)\n- Mobile: `fixed bottom-0 left-0 right-0 max-h-[80vh]` bottom sheet\n- Focus trap with `react-focus-lock` or manual focus management\n- Escape key → onClose()\n- `initial={{ x: '100%' }}` (desktop) / `initial={{ y: '100%' }}` (mobile)\n- Respect `prefers-reduced-motion` → skip animation, instant show/hide\n\nContent:\n- Group tasks by tag (task with multiple tags appears under each)\n- Untagged tasks in separate \"Sans étiquette\" / \"Untagged\" group\n- Each tag header shows tag's own best streak (computed from tag day-keys)\n- Task row: label, all-time count badge (coral pill), streak display (\"X days\" / \"X weeks\" / \"X mois\")\n- Use existing `TagList` component for tag chips\n- Tailwind classes matching cozy palette, no red/warning colors\n\nAccessibility:\n- `role=\"dialog\"` `aria-modal=\"true\"` `aria-labelledby=\"panel-title\"`\n- Focus first interactive element on open\n- Return focus to trigger on close\n- No animations if `prefers-reduced-motion: reduce`",
         "testStrategy": "Vitest component test (Testing Library):\n- Renders with grouped tasks (verify grouping logic)\n- Shows task under multiple tag groups when task has multiple tags\n- Displays untagged group for tasks with empty tags array\n- Calls onClose on Escape key\n- Applies correct aria attributes\n- Skips animation with `prefers-reduced-motion` media query mock\nManual test: verify mobile bottom-sheet vs desktop sidebar layout at 375px and 1024px viewports",
         "priority": "high",
         "dependencies": [
-          1,
-          2
+          "1",
+          "2"
         ],
         "status": "pending",
         "subtasks": []
       },
       {
-        "id": 4,
+        "id": "4",
         "title": "Create use case and action to fetch all user tasks with streaks",
         "description": "Build application-layer use case that fetches all user tasks, computes per-task and per-tag streaks, and returns DTOs for the All Tasks panel",
         "details": "New file: `src/application/list-all-tasks.usecase.ts`\n\n```typescript\nexport type AllTaskDto = {\n  id: string;\n  label: string;\n  tags: string[];\n  allTimeCount: number;\n  bestStreak: { value: number; unit: 'day' | 'week' | 'month' };\n};\n\nexport type TagStreakDto = {\n  tag: string;\n  bestStreak: { value: number; unit: 'day' | 'week' | 'month' };\n};\n\nexport async function listAllTasks(\n  userId: string,\n  timezone: string,\n  taskRepository: TaskRepository,\n  taskLogRepository: TaskLogRepository\n): Promise<{ tasks: AllTaskDto[]; tagStreaks: TagStreakDto[] }>\n```\n\nLogic:\n1. Fetch all user's tasks via `taskRepository.findAllByUserId(userId)`\n2. For each task: get logged day-keys via `taskLogRepository.findLoggedDayKeys([taskId], timezone)`\n3. Call `adaptiveStreak(dayKeys)` from task 1 to compute best streak\n4. Get `allTimeCount` via `taskLogRepository.countByTaskId(taskId)`\n5. Extract unique tags from all tasks\n6. For each tag: call `taskLogRepository.findLoggedDayKeysByUserAndTag(userId, tag, timezone)`, compute tag streak\n7. Return DTOs\n\nAdd Server Action in `src/app/actions.ts`:\n```typescript\nexport async function listAllTasksAction(): Promise<{ tasks: AllTaskDto[]; tagStreaks: TagStreakDto[] }>\n```\n- Get userId/timezone from `auth()` session\n- Call use case with injected repositories\n- Mark as `\"use server\"`",
         "testStrategy": "Unit test in `tests/application/list-all-tasks.usecase.test.ts` with in-memory repositories:\n- User with 3 tasks, varied cadences (daily, weekly, irregular)\n- Verify each task's bestStreak matches expected granularity\n- Task with #work tag logged 5 times → tag streak computed from union of #work tasks\n- Verify allTimeCount matches repository count\n- Empty user → returns empty arrays",
         "priority": "high",
         "dependencies": [
-          1,
-          2
+          "1",
+          "2"
         ],
         "status": "pending",
         "subtasks": []
       },
       {
-        "id": 5,
+        "id": "5",
         "title": "Wire All Tasks panel into main page with toggle",
         "description": "Add a toggle button to DailyLogBoard header that opens/closes the All Tasks panel, fetch data on open, maintain panel state client-side",
         "details": "Modify `src/components/daily-log-board.tsx`:\n\n1. Add state: `const [isPanelOpen, setIsPanelOpen] = useState(false)`\n2. Add toggle icon button next to theme/locale toggles in header\n   - Icon: list/menu icon (3 horizontal lines or grid)\n   - `aria-label`: \"Voir toutes les tâches\" / \"View all tasks\" (i18n)\n   - `onClick={() => setIsPanelOpen(!isPanelOpen)}`\n3. Lazy-load panel data on first open:\n   ```typescript\n   const [panelData, setPanelData] = useState<{ tasks: AllTaskDto[]; tagStreaks: TagStreakDto[] } | null>(null)\n   useEffect(() => {\n     if (isPanelOpen && !panelData) {\n       listAllTasksAction().then(setPanelData)\n     }\n   }, [isPanelOpen, panelData])\n   ```\n4. Render `<AllTasksPanel isOpen={isPanelOpen} onClose={() => setIsPanelOpen(false)} tasks={panelData?.tasks ?? []} tagStreaks={panelData?.tagStreaks ?? []} />`\n5. On desktop, when panel is open, add left margin to main content container to prevent overlap (not an overlay)\n\nAdd i18n strings to `messages/fr.json` and `messages/en.json`:\n```json\n{\n  \"board\": {\n    \"viewAllTasks\": \"Voir toutes les tâches\" / \"View all tasks\",\n    \"untaggedGroup\": \"Sans étiquette\" / \"Untagged\",\n    \"streakDays\": \"{count, plural, one {jour} other {jours}}\" / \"{count, plural, one {day} other {days}}\",\n    \"streakWeeks\": \"{count, plural, one {semaine} other {semaines}}\" / \"{count, plural, one {week} other {weeks}}\",\n    \"streakMonths\": \"mois\" / \"{count, plural, one {month} other {months}}\"\n  }\n}\n```",
         "testStrategy": "Manual testing:\n- Toggle opens/closes panel\n- Panel fetches data only once on first open (verify network tab)\n- Desktop: panel pushes content left, no overlap\n- Mobile: panel slides from bottom, main content stays in place\n- Keyboard: toggle focusable, Escape closes panel, focus returns to toggle\n- Reduced motion: panel appears instantly without slide animation",
         "priority": "medium",
         "dependencies": [
-          3,
-          4
+          "3",
+          "4"
         ],
         "status": "pending",
         "subtasks": []
       },
       {
-        "id": 6,
+        "id": "6",
         "title": "Implement task editing (rename label, edit tags) in panel",
         "description": "Add edit UI and logic inside All Tasks panel to rename task labels and add/remove tags, with label collision detection that suggests merge instead",
         "details": "1. Add edit mode to `TaskRow` component inside `all-tasks-panel.tsx`:\n   - Pencil icon button → enters edit mode (inline or expand row)\n   - Edit form: text input for label, tag input (comma-separated or chip-based)\n   - Save/Cancel buttons\n\n2. New use case: `src/application/edit-task.usecase.ts`\n   ```typescript\n   export async function editTask(\n     taskId: string,\n     userId: string,\n     newLabel: string,\n     newTags: string[],\n     taskRepository: TaskRepository\n   ): Promise<void>\n   ```\n   Logic:\n   - Verify task ownership: `task.userId === userId`\n   - If label changed: check for collision with `taskRepository.findByUserIdAndLabel(userId, newLabel)`\n   - If collision exists → throw `TaskLabelCollisionError` with merge hint\n   - Otherwise: update task (create new Task entity via `Task.create()`, call `taskRepository.save()`)\n   - Tags are normalized via `normalizeTags()` before save\n\n3. Server Action in `src/app/actions.ts`:\n   ```typescript\n   export async function editTaskAction(taskId: string, label: string, tags: string[]): Promise<{ success: boolean; error?: string }>\n   ```\n   - Catch `TaskLabelCollisionError` → return `{ success: false, error: 'COLLISION' }`\n   - UI shows error: \"Cette tâche existe déjà. Voulez-vous les fusionner ?\" with link to merge flow\n\n4. Optimistic update in panel: update local state immediately, revert on error\n\n5. Define `TaskLabelCollisionError` in `src/domain/task/errors.ts` (new file or extend label.ts)",
         "testStrategy": "Unit test in `tests/application/edit-task.usecase.test.ts`:\n- Rename task label → success, label updated\n- Add/remove tags → tags array updated and normalized\n- Rename to existing label (collision) → throws TaskLabelCollisionError\n- Edit task owned by different user → throws authorization error\n- Tags are trimmed/lowercased/deduped per existing normalizeTags contract\nManual test: trigger collision, verify error message and merge hint appear",
         "priority": "medium",
         "dependencies": [
-          5
+          "5"
         ],
         "status": "pending",
         "subtasks": []
       },
       {
-        "id": 7,
+        "id": "7",
         "title": "Build manual task merge service and UI",
         "description": "Create domain service to merge multiple tasks (reassign logs, union tags, delete merged tasks) and add multi-select merge UI in All Tasks panel",
         "details": "1. New use case: `src/application/merge-tasks.usecase.ts`\n   ```typescript\n   export async function mergeTasks(\n     userId: string,\n     taskIdsToMerge: string[],\n     survivingTaskId: string,\n     taskRepository: TaskRepository,\n     taskLogRepository: TaskLogRepository\n   ): Promise<void>\n   ```\n   Logic:\n   - Validate all tasks belong to `userId` (multi-task auth check)\n   - Fetch all tasks, verify `survivingTaskId` is in the set\n   - Union tags from all tasks via `mergeTags()` helper\n   - Reassign all TaskLog rows to survivingTaskId (new repo method below)\n   - Update surviving task with unioned tags\n   - Delete merged-away tasks\n\n2. New `TaskLogRepository` method in interface and Prisma implementation:\n   ```typescript\n   reassignTaskLogs(fromTaskIds: string[], toTaskId: string): Promise<void>\n   ```\n   Prisma: `await client.taskLog.updateMany({ where: { taskId: { in: fromTaskIds } }, data: { taskId: toTaskId } })`\n\n3. New `TaskRepository` method:\n   ```typescript\n   deleteMultiple(taskIds: string[]): Promise<void>\n   ```\n   Prisma: `await client.task.deleteMany({ where: { id: { in: taskIds } } })`\n\n4. Server Action `mergeTasksAction(taskIds: string[], survivingId: string)`\n\n5. UI in `all-tasks-panel.tsx`:\n   - Checkbox next to each task for multi-select\n   - \"Merge\" button appears when 2+ tasks selected\n   - Modal/dialog: show selected tasks, radio buttons to pick surviving label\n   - Confirm → call action, close panel and refresh\n\n6. Add authorization error class for multi-task ownership violation",
         "testStrategy": "Unit test in `tests/application/merge-tasks.usecase.test.ts`:\n- Merge 2 tasks → all logs reassigned, tags unioned, 1 task deleted\n- Merge 3 tasks with overlapping tags → dedupe and preserve order\n- Attempt merge across different users → throws authorization error\n- surviving task not in merge set → throws validation error\nIntegration test in `tests/infrastructure/prisma/`:\n- Verify Prisma reassignTaskLogs and deleteMultiple work correctly\n- Check that @@unique([userId, labelKey]) constraint doesn't block merge (surviving label freed before reassignment completes)",
         "priority": "medium",
         "dependencies": [
-          6
+          "6"
         ],
         "status": "pending",
         "subtasks": []
       },
       {
-        "id": 8,
+        "id": "8",
         "title": "Build similarity heuristic and merge-suggestion infrastructure",
         "description": "Create string-similarity comparison utility, generate merge candidate pairs, persist dismissed suggestions, and surface notification UI",
         "details": "1. Similarity heuristic: `src/lib/task-similarity.ts`\n   ```typescript\n   export function areSimilar(label1: string, label2: string, tags1: string[], tags2: string[]): boolean\n   ```\n   - Use Levenshtein distance or Jaro-Winkler on normalized labels\n   - Boost score if tags overlap\n   - Threshold: conservative (e.g., 0.85 similarity) to avoid false positives\n   - Alternatively, use a lightweight fuzzy-match library (fuzzball.js, or native `Intl.Collator` with sensitivity)\n\n2. Use case: `src/application/suggest-merges.usecase.ts`\n   ```typescript\n   export async function suggestMerges(\n     userId: string,\n     taskRepository: TaskRepository,\n     dismissedRepository: DismissedSuggestionRepository\n   ): Promise<Array<{ task1Id: string; task2Id: string; reason: string }>>\n   ```\n   - Fetch all user tasks\n   - Compare each pair with `areSimilar()`\n   - Filter out dismissed pairs via `dismissedRepository.isDismissed(userId, task1Id, task2Id)`\n   - Return top N suggestions (limit 5)\n\n3. New domain: `src/domain/merge-suggestion/` with:\n   - `dismissed-suggestion.entity.ts` (simple value object: userId, taskId1, taskId2, dismissedAt)\n   - `dismissed-suggestion.repository.ts` interface\n   - Prisma implementation in infrastructure layer\n\n4. New Prisma model:\n   ```prisma\n   model DismissedMergeSuggestion {\n     id          String   @id @default(uuid())\n     userId      String\n     taskId1     String\n     taskId2     String\n     dismissedAt DateTime @default(now())\n     @@unique([userId, taskId1, taskId2])\n     @@map(\"dismissed_merge_suggestions\")\n   }\n   ```\n\n5. Server Actions:\n   - `suggestMergesAction()` → call use case, return suggestions\n   - `dismissSuggestionAction(task1Id, task2Id)` → persist dismissal\n\n6. UI: notification banner on main page (conditionally rendered)\n   - \"3 tâches pourraient être fusionnées\" with \"Voir\" button\n   - Clicking opens All Tasks panel with suggested pairs pre-highlighted\n   - Each suggestion has \"Dismiss\" (X) button\n   - Fetch suggestions on page load (or periodically via interval)",
         "testStrategy": "Unit test in `tests/lib/task-similarity.test.ts`:\n- Similar labels (\"Clean kitchen\" vs \"Cleaned kitchen\") → true\n- Dissimilar labels → false\n- Same label, overlapping tags → very high score\n- Verify threshold is conservative (no false positives on test cases)\n\nUnit test in `tests/application/suggest-merges.usecase.test.ts`:\n- User with 5 tasks, 2 pairs similar → returns 2 suggestions\n- Dismissed pair excluded from results\n- No suggestions for dissimilar tasks\n\nIntegration test: verify Prisma dismissal repository works with unique constraint",
         "priority": "medium",
         "dependencies": [
-          7
+          "7"
         ],
         "status": "pending",
         "subtasks": []
       },
       {
-        "id": 9,
+        "id": "9",
         "title": "Add quick-add buttons (v1: frequent/recent, v2: cadence-aware)",
         "description": "Render 3-5 quick-add buttons near task input pre-filled with suggested tasks, initially based on frequency/recency, later upgraded to cadence-aware 'due now' logic",
         "details": "1. Use case: `src/application/suggest-quick-tasks.usecase.ts`\n   ```typescript\n   export async function suggestQuickTasks(\n     userId: string,\n     timezone: string,\n     taskRepository: TaskRepository,\n     taskLogRepository: TaskLogRepository,\n     strategy: 'frequent' | 'cadence'\n   ): Promise<Array<{ label: string; tags: string[] }>>\n   ```\n   \n   v1 (strategy='frequent'):\n   - Fetch all user tasks, sort by `countByTaskId` descending\n   - Return top 5\n   \n   v2 (strategy='cadence', reuses task 1's engine):\n   - For each task: get day-keys, call `estimateCadence()`, check if \"due now\"\n   - \"Due now\" = (today - lastLoggedDay) >= estimatedInterval\n   - Return tasks due now, limit 5\n\n2. Server Action: `suggestQuickTasksAction(strategy)` → returns suggestions\n\n3. UI: new component `src/components/quick-add-buttons.tsx`\n   - Renders below TaskInput as a row of pill buttons\n   - Each button: task label, click → auto-fill input and submit (or directly call logTaskAction)\n   - Fetch suggestions on page load, pass strategy from env or settings\n   - Show loading state while fetching\n   - Empty state: hide buttons if no suggestions\n\n4. Integrate into `DailyLogBoard`:\n   - Render `<QuickAddButtons>` below `<TaskInput>`\n   - Pass `onSelect={(label) => handleLog(label)}` callback\n\n5. i18n: button aria-labels for screen readers\n\n6. Phase: ship v1 immediately, upgrade to v2 after task 1 is stable",
         "testStrategy": "Unit test in `tests/application/suggest-quick-tasks.usecase.test.ts`:\n- v1: User with tasks of varied counts → returns top 5 by frequency\n- v2: Task with 7-day cadence, last logged 8 days ago → appears in suggestions\n- v2: Task with 30-day cadence, last logged 10 days ago → not due, excluded\n- Empty user → returns []\n\nManual test:\n- Verify buttons render and are clickable\n- Clicking button logs task correctly\n- Buttons update after logging (frequency changes)",
         "priority": "low",
         "dependencies": [
-          1
+          "1"
         ],
         "status": "pending",
         "subtasks": []
       },
       {
-        "id": 10,
+        "id": "10",
         "title": "Implement input autocomplete with search-style matching and curated fallback",
         "description": "Add substring/fuzzy autocomplete to TaskInput, searching user's own task history first, then falling back to a localized curated generic list",
         "details": "1. Use case: `src/application/search-tasks.usecase.ts`\n   ```typescript\n   export async function searchTasks(\n     userId: string,\n     query: string,\n     taskRepository: TaskRepository,\n     taskLogRepository: TaskLogRepository\n   ): Promise<Array<{ label: string; count: number }>>\n   ```\n   - Fetch user tasks via `taskRepository.findAllByUserId(userId)`\n   - Filter: substring match on label (case-insensitive, use `label.toLowerCase().includes(query.toLowerCase())`)\n   - Optionally: fuzzy match with a scoring library (fuse.js or similar)\n   - Rank by log frequency (via `countByTaskId`)\n   - Return top 5 matches\n\n2. Server Action: `searchTasksAction(query: string)`\n\n3. Curated fallback list in `messages/fr.json` and `messages/en.json`:\n   ```json\n   {\n     \"board\": {\n       \"genericTasks\": [\n         \"Boire de l'eau\",\n         \"Faire une promenade\",\n         \"Méditer 5 minutes\",\n         \"Appeler un ami\",\n         \"Ranger mon bureau\"\n       ]\n     }\n   }\n   ```\n   English equivalents in `messages/en.json`\n\n4. Modify `src/components/task-input.tsx`:\n   - Add `<datalist>` or custom dropdown for autocomplete\n   - `onChange` → debounce input, call `searchTasksAction(value)`\n   - If user results empty, fall back to `t.raw('genericTasks')` filtered by substring match\n   - Render suggestions as dropdown below input\n   - Arrow keys to navigate, Enter to select, Escape to close\n   - Accessible: `role=\"combobox\"`, `aria-autocomplete=\"list\"`, `aria-expanded`, link to `role=\"listbox\"`\n\n5. Privacy guarantee: never fetch or display other users' tasks\n\n6. Debounce: use `useDeferredValue` or custom debounce hook (300ms delay)",
@@ -131,7 +132,7 @@
         "subtasks": []
       },
       {
-        "id": 11,
+        "id": "11",
         "title": "Add admin cross-user aggregate stats (global task/tag leaderboard)",
         "description": "Create admin-only page showing most-logged task labels and most-used tags across all users, extending existing /admin back-office",
         "details": "1. Use case: `src/application/admin/aggregate-stats.usecase.ts`\n   ```typescript\n   export type AggregateStatsDto = {\n     topLabels: Array<{ label: string; totalLogs: number }>;\n     topTags: Array<{ tag: string; taskCount: number }>;\n   };\n   \n   export async function getAggregateStats(\n     taskRepository: TaskRepository,\n     taskLogRepository: TaskLogRepository\n   ): Promise<AggregateStatsDto>\n   ```\n   \n   Logic:\n   - Fetch all tasks across all users\n   - Group by `labelKey`, count total logs per label (via `countByTaskId`, summed)\n   - Sort descending, take top 20 labels\n   - Extract all tags (flatten `task.tags` arrays), count occurrences\n   - Sort descending, take top 20 tags\n   - Return DTO\n   \n   Alternative (more efficient): raw Prisma aggregation query:\n   ```typescript\n   // Top labels\n   const labelStats = await prisma.$queryRaw`\n     SELECT t.label, COUNT(tl.id) as total_logs\n     FROM tasks t\n     JOIN task_logs tl ON tl.task_id = t.id\n     GROUP BY t.label_key, t.label\n     ORDER BY total_logs DESC\n     LIMIT 20\n   `\n   \n   // Top tags (unnest array, group, count)\n   const tagStats = await prisma.$queryRaw`\n     SELECT unnest(tags) as tag, COUNT(*) as task_count\n     FROM tasks\n     WHERE array_length(tags, 1) > 0\n     GROUP BY tag\n     ORDER BY task_count DESC\n     LIMIT 20\n   `\n   ```\n\n2. Server component page: `src/app/admin/stats/page.tsx`\n   - Gated by admin role (already enforced by `admin/layout.tsx`)\n   - Fetch data via `getAggregateStats()`\n   - Render two tables: \"Top Task Labels\" and \"Top Tags\"\n   - Reuse `<AdminTable>` component from existing admin pages\n   - Columns: Label/Tag, Count\n\n3. Add nav link to `src/app/admin/page.tsx` or layout sidebar: \"Global Stats\" / \"Statistiques globales\"\n\n4. i18n strings in `messages/*/admin.json`",
@@ -143,9 +144,13 @@
       }
     ],
     "metadata": {
-      "created": "2026-07-16T07:12:11.089Z",
-      "updated": "2026-07-16T07:12:11.089Z",
-      "description": "Tasks for master context"
+      "version": "1.0.0",
+      "lastModified": "2026-07-16T08:07:12.544Z",
+      "taskCount": 11,
+      "completedCount": 1,
+      "tags": [
+        "master"
+      ]
     }
   }
 }
