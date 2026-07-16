@@ -1,0 +1,105 @@
+<context>
+# Overview
+The core app (daily task logging, unconditionally positive feedback, auth, admin back-office, i18n, theming, self-hosted deploy) is already built and shipped. This PRD scopes the next major body of work: giving users a real relationship with their accumulated task history — not just today's list — plus a small set of admin-facing aggregate stats. Six user-facing features and one admin feature are covered, all discussed and scoped together because several of them share underlying machinery (see Technical Architecture). A "badge system" was also discussed but is deliberately **out of scope** for this PRD — the requester doesn't yet know its mechanics, and forcing a design now would mean guessing. It should get its own PRD once there's a concrete shape to build toward.
+
+Every feature below must hold to the app's existing, load-bearing philosophy: **positive feedback only, nothing that reads as a broken streak or a failure state.** This constrains several designs below more than it might first appear to (see Streaks).
+
+# Core Features
+
+## 1. All Tasks panel (foundation for #2 and #3)
+- What it does: a panel, reachable from the main page, listing every task the user has ever logged, grouped by tag (a task with multiple tags appears under each of its tag groups; untagged tasks get their own group). Each task shows its all-time count (already computed today via `TaskLogRepository.countByTaskId`, same as the admin tasks list) and its best-ever streak (see Streaks below). Each tag group header shows the tag's own aggregated best-ever streak.
+- Placement/interaction: on mobile, a bottom sheet that slides up from under the main view; on desktop, a right-hand panel that slides in and pushes the main content left (not an overlay on top of it). Triggered by a toggle (icon/button) near the header, alongside the existing theme/locale toggles. Closed by default on every load.
+- Why it matters: today a task's entire life only exists as "whatever's logged today" plus an admin-only stats view. Users have no way to see their own accumulated history, tags, or streaks without this.
+
+## 2. Task editing (lives inside the panel)
+- What it does: from the All Tasks panel, a user can rename a task's label and add/remove its tags.
+- Edge case to enforce: renaming a task to a label that collides (case/whitespace-insensitive, same normalization as `labelKey`) with another of the user's existing tasks must be rejected with a clear error pointing at Merge (below) instead — silently overwriting or auto-merging on rename would surprise the user and bypass the more deliberate merge flow.
+
+## 3. Task merging (lives inside the panel; depends on #1)
+- What it does: a user selects two or more of their own tasks and merges them into one. All `TaskLog` rows from the merged-away task(s) are reassigned to the surviving task, tags are unioned (same union-not-replace semantics `TaskLoggingService.logTask` already uses when relogging), and the merged-away task row(s) are deleted. The user picks (or confirms) which label survives.
+- Durability, as decided: this is a **one-time reassignment**, not a durable alias. If the user later types the old, now-merged-away label again verbatim, it creates a fresh new task rather than routing back into the merged one — simpler, no new schema field, accepted tradeoff that a merge could organically "re-split" over time if the user reuses old phrasing.
+- Security: both/all tasks in a merge must belong to the requesting user — a new two-task authorization check, since every existing action so far only ever checks a single task's ownership.
+- Assisted suggestions: separately from manual merge, the app periodically surfaces a dismissible notification ("3 tasks could be merged — want to look?") driven by a similarity heuristic (see Technical Architecture) comparing the user's own task labels/tags to each other. Opening it deep-links into the panel with the candidate pair(s) pre-highlighted. Each suggested pair, once dismissed, must not resurface — needs its own "dismissed suggestion" record (task-pair scoped), not a one-shot session flag.
+
+## 4. Streaks — best-ever, adaptive granularity, per task and per tag
+- What it does: instead of a live "current streak" that can hit zero (which would violate the app's no-broken-chain philosophy), each task/tag shows its **best-ever, ever-growing chain**, expressed in whichever time unit (days/weeks/months) still holds unbroken. Concretely, as clarified in discussion: a task logged roughly weekly shouldn't show "streak: 0" the day after a missed day — it should show its unbroken run in *weeks* instead, since daily granularity was never really the task's rhythm to begin with. The displayed number only ever grows or reframes to a coarser unit; it never resets to zero or visibly "breaks."
+- Why it matters: this is the single biggest philosophical extension of the app's existing "no punitive streaks" stance into per-task/per-tag territory, and needs to be gotten right — a naive "consecutive calendar days" streak would punish exactly the non-daily tasks the user described (chores, errands) that are the whole reason this feature exists.
+- Tag streaks specifically require a new query shape: today `findLoggedDayKeys` is scoped per task; a tag's streak needs logged-day-keys unioned across every task carrying that tag for the user.
+
+## 5. Quick-add buttons (shares the cadence engine with Streaks)
+- What it does: 3-5 buttons near the input, pre-filled with tasks ready to log in one tap.
+- v1 (simple): populate from the user's own most-frequent and/or most-recent tasks — no intelligence needed, immediately useful, and gives the panel/streak work something to reuse right away.
+- v2 (cadence-aware): once the cadence-detection engine (below) exists for Streaks, reuse it here — surface a task when it's statistically "due" (e.g. a task historically logged every ~14 days gets suggested again once that window reopens), rather than at random.
+
+## 6. Input autocomplete (search-style, not prefix-only)
+- What it does: as the user types in the main task input, suggest matching tasks from their own history — matching must work like a search, not a prefix match (typing "errands" must surface "Ran some errands" even though the match is mid-string).
+- Fallback, as decided: if nothing in the user's own history matches, fall back to a small **curated, hand-picked, localized generic list** (e.g. "Drink water" / "Boire de l'eau" — same bilingual-JSON pattern already used for `board.positiveMessages` in `messages/en.json`/`messages/fr.json`), never real cross-user data. This was an explicit privacy call: task labels are free text and can be personal, so no other user's actual logged tasks may ever surface as a suggestion to someone else.
+
+## 7. Admin: global task/tag stats (independent of everything else above)
+- What it does: extends the existing admin back-office (`/admin/tasks` today shows all-time per-task stats already) with an aggregate, cross-user view — most-logged task labels and most-used tags, site-wide.
+- Why it matters: gives the admin a sense of overall usage patterns beyond the current per-account/per-task drill-down views.
+- This feature has no dependency on the panel/streak/merge work and can be built in any order relative to the rest.
+
+# User Experience
+- The panel's own UX must not contradict the "no failure state" ethos anywhere: no red/warning styling on streaks, no "you broke your streak" copy anywhere, ever — a coarser time-unit reframing is the *only* way a streak's displayed state changes.
+- Merge suggestions are opt-in to review, never auto-applied — the notification only ever offers to open the panel with a suggestion, it never merges anything without an explicit user action.
+- Autocomplete must feel like search (substring/fuzzy, ranked by the user's own logging frequency), not a rigid prefix-only dropdown — this was explicitly called out as the difference between a useful and a frustrating autocomplete.
+- Editing/merging are both scoped to the panel, not the main daily-log flow — the main page (`TaskInput`, today's list) stays exactly as minimal as it is today; all of the new "manage my history" surface lives behind the toggle.
+</context>
+<PRD>
+# Technical Architecture
+- **Shared cadence-detection engine (new)**: a domain-layer utility, given a task's (or tag's) sequence of logged day-keys, that (a) estimates the task's typical interval (e.g. via median/mode gap between consecutive logged days) and (b) derives the "best-ever, adaptive-granularity" streak used by Streaks, and is later reused by Quick-add v2 to decide when a task is statistically "due" again. Building this once as a pure, unit-tested function (mirroring how `findAdjacentDayKey`/`adjustBouquet` are already pure and independently tested) rather than baking ad-hoc logic separately into the streak display and the quick-add suggestion is the reason these two features are grouped under one PRD.
+- **Tag-scoped day-key queries (new)**: `TaskLogRepository` currently exposes `findLoggedDayKeys` per task; tag streaks and the All Tasks panel's tag grouping need an equivalent scoped to "every task of this user carrying tag X," which is a new repository method, not a client-side reduction over per-task calls (that would be N+1 against Postgres for users with many tasks).
+- **Merge as a domain operation (new)**: a `MergeTasksService` (or equivalent use case) that: validates all input tasks belong to the requesting user, reassigns every `TaskLog` from the merged-away task(s) to the surviving task, unions tags (reusing the existing `mergeTags` helper from `src/domain/task/tag.ts`), and deletes the merged-away `Task` row(s) — needs a new repository method to bulk-reassign `TaskLog.taskId`, and the existing `@@unique([userId, labelKey])` constraint means the surviving label must be freed up correctly if two colliding labels are ever merged.
+- **Merge-suggestion heuristic (new)**: a similarity comparison over a user's own task labels (e.g. normalized-string similarity/edit-distance) plus shared-tag overlap, run to generate candidate pairs; needs a small persistence layer for "dismissed suggestion" pairs (per user, per task-pair) so a dismissed suggestion doesn't resurface — this is new state, not derivable from existing tables.
+- **Panel UI (new components)**: a responsive slide-in/slide-up panel component (bottom sheet on mobile via a media-query or existing viewport-detection pattern, right panel on desktop that reflows — not overlays — the main content). Must be built with `prefers-reduced-motion` support from the start (see Risks) rather than joining the existing backlog of animations that need retrofitting. Needs focus-trapping and Escape-to-close for a11y, consistent with this app's existing a11y bar (contrast fixes, `role="status"`, `aria-hidden` on decorative elements).
+- **Autocomplete backend**: a server-side search over the user's own `Task.label`/`labelKey` (substring/fuzzy, ranked by log frequency) — likely a small new use case rather than a repository method alone, since ranking logic belongs in the application layer per this codebase's existing DDD separation. The curated generic fallback list lives in `messages/{locale}.json` alongside `board.positiveMessages`, not hardcoded in a lib file, matching the existing i18n convention.
+- **Admin aggregate stats**: extends the existing `list-tasks-with-stats` pattern with a new cross-user aggregation use case/query (`GROUP BY labelKey`/`tags` across all users) — additive to `src/application/admin/`, no changes needed to existing per-account admin views.
+
+# Development Roadmap
+Phase 1 — Cadence engine + tag-scoped queries (foundation, no UI):
+- Build and unit-test the cadence-detection/best-ever-streak function against a table of synthetic log-day-key sequences (daily-rhythm task, weekly-rhythm task, irregular task).
+- Add the tag-scoped `findLoggedDayKeys`-equivalent repository method, tested against real Postgres per this project's existing integration-test convention.
+
+Phase 2 — All Tasks panel, read-only:
+- Panel component (responsive bottom-sheet/right-panel), a11y (focus trap, Escape, reduced-motion-aware from day one), grouped-by-tag rendering, per-task and per-tag streak display wired to Phase 1's engine.
+
+Phase 3 — Task editing:
+- Rename + tag edit from the panel, including the label-collision-rejects-with-a-merge-hint edge case.
+
+Phase 4 — Manual merge:
+- Multi-select in the panel, `MergeTasksService`, ownership checks, tag union, log reassignment, deletion of merged-away tasks.
+
+Phase 5 — Assisted merge suggestions:
+- Similarity heuristic, dismissed-suggestion persistence, the "N tasks could be merged" notification, deep-link into the panel.
+
+Phase 6 — Quick-add:
+- v1: 3-5 buttons from most-frequent/most-recent tasks (no dependency on Phase 1).
+- v2: swap in cadence-aware "due now" selection once Phase 1 exists.
+
+Phase 7 — Input autocomplete:
+- Search-style matching over the user's own tasks; curated localized fallback list added to `messages/*.json`.
+
+Phase 8 — Admin global stats:
+- Cross-user aggregate use case + a new admin page/section. Independent — can be built in parallel with any of the above.
+
+(Badges: explicitly deferred, not part of this roadmap.)
+
+# Logical Dependency Chain
+1. Phase 1 (cadence engine + tag-scoped queries) blocks Phase 2 (panel needs streak data to display) and is reused again in Phase 6 v2 — build it first and once.
+2. Phase 2 (panel, read-only) must exist before Phase 3 (editing) and Phase 4 (merge), since both are described as living inside the panel rather than being standalone screens.
+3. Phase 4 (manual merge) should land before Phase 5 (assisted suggestions) — suggestions are only useful once there's a merge flow for them to point at.
+4. Phase 6 (quick-add) and Phase 7 (autocomplete) don't depend on the panel/merge work at all and can be built in parallel with Phases 2-5 if useful for pacing.
+5. Phase 8 (admin stats) has no dependency on anything else in this PRD and can be slotted in at any point.
+
+# Risks and Mitigations
+- Risk: the adaptive-granularity streak (day → week → month reframing) is genuinely novel logic with no existing precedent in this codebase, unlike most other features here which extend an established pattern. Mitigation: build and unit-test it in complete isolation (Phase 1) against hand-constructed day-key fixtures covering daily, weekly, and irregular cadences before any UI consumes it — get the algorithm right on paper/tests first, since a wrong streak number is a visible, user-facing correctness bug in a feature whose entire point is to never look broken.
+- Risk: merge is the first-ever multi-task-ownership operation in the app; existing authorization checks are all single-task. Mitigation: explicit test coverage for "merge across two different users' tasks must be rejected," not just the happy path.
+- Risk: cross-user data leakage via autocomplete or admin stats. Mitigation: autocomplete fallback is a curated static list only (decided above, no real user data ever); admin aggregate stats are admin-gated the same way `/admin/tasks` already is today, so no new exposure surface beyond what admins can already see per-account.
+- Risk: merge-suggestion heuristic quality — a bad similarity heuristic either suggests nonsense pairs (annoying) or misses obvious ones (feature feels broken). Mitigation: start with a conservative/high-precision threshold (few false positives, some false negatives) rather than an aggressive one, since a wrong suggestion is more annoying than a missed one, and this can be tuned after real usage rather than guessed upfront.
+- Risk: the panel is the app's first responsive-layout-shape-changing UI (bottom sheet vs. side panel, not just a resized version of the same layout) and its first genuinely new modal-like surface. Mitigation: treat its a11y (focus trap, Escape, reduced motion) as first-class from Phase 2's first commit, not a follow-up pass — this project has already accumulated one reduced-motion backlog item from treating animation a11y as an afterthought; don't repeat that here.
+
+# Appendix
+- Existing precedent this PRD builds on: `findAdjacentDayKey`/`findLoggedDayKeys` (day-key-based navigation, `src/domain/task/day-key.ts` and friends) for the cadence engine's data source; `mergeTags`/`normalizeTags` (`src/domain/task/tag.ts`) for merge's tag-union step; `board.positiveMessages` in `messages/*.json` for the autocomplete fallback list's localization pattern; `list-tasks-with-stats` for the admin aggregate stats use case's shape.
+- Explicitly out of scope for this PRD: badge system (needs its own future design pass once its mechanics are decided).
+</PRD>
