@@ -134,3 +134,7 @@ Because `develop` is protected (previous point), whatever Portainer picks up has
 - Branch names follow [Conventional Branch](https://conventionalbranch.org/): `main` and `develop` are the only bare names; all other work lives on `feature/…`, `bugfix/…`, `hotfix/…`, `release/…`, or `chore/…` (kebab-case description).
 - `main` is protected — no direct commits, no direct pushes.
 - Every feature lives on its own `feature/…` branch and merges into `develop`, never straight into `main`.
+
+## Task Master AI Instructions
+**Import Task Master's development workflow commands and guidelines, treat as if import is in the main CLAUDE.md file.**
+@./.taskmaster/CLAUDE.md
